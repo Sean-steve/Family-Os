@@ -1,19 +1,21 @@
 import { seedFamily, type FamilyData } from "./family/model";
+import { seedStrategy, type StrategyState, type GoalExtension } from "./strategy/model";
 import { seedOperations, type OperationsState, type Repeat, type Category, type Priority } from "./operations/model";
 export type Member = { id: string; name: string; role: string; avatar: number; color: string };
 export type Task = { id: string; title: string; person: string; due: string; done: boolean;
   description?: string; category?: Category; dueDate?: string; assigneeIds?: string[];
   householdId?: string; priority?: Priority; repeat?: Repeat; completedDates?: string[];
   archived?: boolean; };
-export type Goal = { id: string; title: string; meta: string; progress: number; image: string; color: "green" | "blue"; };
+export type Goal = { id: string; title: string; meta: string; progress: number; image: string; color: "green" | "blue"; } & GoalExtension;
 export type PlanEvent = { id: string; time: string; title: string; note: string; attendees: string[]; color: string; done?: boolean;
   date?: string; endTime?: string; location?: string; householdId?: string; category?: Category;
   status?: "ACTIVE" | "CANCELLED"; };
 export type Upcoming = { id: string; when: string; title: string; detail: string; icon: string; tint: string };
-export type AppData = { members: Member[]; family: FamilyData; operations: OperationsState; tasks: Task[]; goals: Goal[]; events: PlanEvent[]; upcoming: Upcoming[]; notificationsSeen: boolean };
+export type AppData = { members: Member[]; family: FamilyData; operations: OperationsState; strategy: StrategyState; tasks: Task[]; goals: Goal[]; events: PlanEvent[]; upcoming: Upcoming[]; notificationsSeen: boolean };
 export const seed: AppData = {
   family: seedFamily,
   operations: seedOperations,
+  strategy: seedStrategy,
   members: [
     { id: "alex", name: "Alex", role: "Owner", avatar: 12, color: "#cee6ff" },
     { id: "jamie", name: "Jamie", role: "Co-parent", avatar: 47, color: "#ffe0db" },
