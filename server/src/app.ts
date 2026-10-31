@@ -83,9 +83,9 @@ export async function createApi(options:ApiOptions):Promise<FastifyInstance>{
         const result=await db.query<FamilyRow>(
           "SELECT f.id,f.name,f.created_at,m.role FROM family.families f "+
           "INNER JOIN family.memberships m ON m.family_id=f.id "+
-          "WHERE m.user_id=$1 AND m.state='ACTIVE' ORDER BY f.created_at DESC,f.id LIMIT 50",
+          "WHERE m.user_id=$1 AND m.state='ACTIVE' ORDER BY f.created_at DESC,f.id LIMIT 51",
           [principal.actorId]);
-        return {data:{items:result.rows.map(presentFamily),count:result.rows.length,hasMore:result.rows.length===50}};
+        return {data:{items:result.rows.slice(0,50).map(presentFamily),count:Math.min(result.rows.length,50),hasMore:result.rows.length>50}};
       });
     });
     scoped.get<{Params:{familyId:string}}>("/api/v1/families/:familyId",async(request,reply)=>{
