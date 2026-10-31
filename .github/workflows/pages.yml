@@ -20,7 +20,13 @@ jobs:
           node-version: '22'
       - run: npm install --no-audit --no-fund
       - run: npm run test
-      - run: npm run build
+      - name: Build verified-registry-capable frontend
+        env:
+          VITE_FAMILY_API_URL: ${{ vars.VITE_FAMILY_API_URL }}
+          VITE_FAMILY_OIDC_AUTHORITY: ${{ vars.VITE_FAMILY_OIDC_AUTHORITY }}
+          VITE_FAMILY_OIDC_CLIENT_ID: ${{ vars.VITE_FAMILY_OIDC_CLIENT_ID }}
+          VITE_FAMILY_OIDC_SCOPE: ${{ vars.VITE_FAMILY_OIDC_SCOPE }}
+        run: npm run build
       - uses: actions/configure-pages@v5
         with:
           enablement: true
