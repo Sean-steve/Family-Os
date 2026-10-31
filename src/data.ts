@@ -1,3 +1,4 @@
+import { seedIntelligence, type IntelligenceState } from "./intelligence/model";
 import { seedLife, type FamilyLifeState } from "./life/model";
 import { seedGovernance, type GovernanceState } from "./governance/model";
 import { seedFamily, type FamilyData } from "./family/model";
@@ -13,13 +14,14 @@ export type PlanEvent = { id: string; time: string; title: string; note: string;
   date?: string; endTime?: string; location?: string; householdId?: string; category?: Category;
   status?: "ACTIVE" | "CANCELLED"; };
 export type Upcoming = { id: string; when: string; title: string; detail: string; icon: string; tint: string };
-export type AppData = { members: Member[]; family: FamilyData; operations: OperationsState; strategy: StrategyState; governance: GovernanceState; life: FamilyLifeState; tasks: Task[]; goals: Goal[]; events: PlanEvent[]; upcoming: Upcoming[]; notificationsSeen: boolean };
+export type AppData = { members: Member[]; family: FamilyData; operations: OperationsState; strategy: StrategyState; governance: GovernanceState; life: FamilyLifeState; intelligence: IntelligenceState; tasks: Task[]; goals: Goal[]; events: PlanEvent[]; upcoming: Upcoming[]; notificationsSeen: boolean };
 export const seed: AppData = {
   family: seedFamily,
   operations: seedOperations,
   strategy: seedStrategy,
   governance: seedGovernance,
   life: seedLife,
+  intelligence: seedIntelligence,
   members: [
     { id: "alex", name: "Alex", role: "Owner", avatar: 12, color: "#cee6ff" },
     { id: "jamie", name: "Jamie", role: "Co-parent", avatar: 47, color: "#ffe0db" },
