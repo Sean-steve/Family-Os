@@ -6,10 +6,10 @@ import {
   Clock3, Command, Compass, Heart, HeartHandshake, Home, Info, Lightbulb,
   ListTodo, Menu, MessageSquareText, Moon, Plus, Search, Settings2, ShieldCheck,
   Sparkles, Sun, Target, TreePine, TrendingUp, TriangleAlert, UserRound,
-  UserRoundPlus, UsersRound, Wallet, X, type LucideIcon
+  UsersRound, X, type LucideIcon
 } from "lucide-react";
 import { seed, navItems, navigationDescriptions } from "./data";
-import type { AppData, Goal, Member, Task } from "./data";
+import type { AppData, Goal, Member } from "./data";
 
 const STORE_KEY = "family-os-preview-v1";
 const icons: Record<string, LucideIcon> = {
