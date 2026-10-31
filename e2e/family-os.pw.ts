@@ -140,7 +140,7 @@ test("complete family journey: experience -> calendar -> memory -> legacy with c
   await expForm.getByLabel("Experience name").fill(title);
   await expForm.getByLabel("Stage").selectOption("PLANNED");
   await expForm.getByLabel("Date").fill("2026-11-08");
-  await expForm.getByLabel("Time").fill("14:00");
+  await expForm.getByLabel("Time",{exact:true}).fill("14:00");
   await expForm.getByLabel("What should we experience together?").fill("A fictional afternoon picnic to demonstrate connected records.");
   await expForm.getByRole("button",{name:"Save Experience"}).click();
   const expCard=page.locator(".lf-experience-card").filter({hasText:title});
