@@ -82,6 +82,12 @@ jobs:
             -e FAMILY_ADMIN_ALLOW_CIDR=127.0.0.1/32 \
             -v "$PWD/infra/staging/Caddyfile:/etc/caddy/Caddyfile:ro" \
             caddy:2.11.7-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+      - name: Validate staging scripts before deployment
+        run: |
+          node --check infra/staging/preflight.mjs
+          node --check infra/staging/verify-live.mjs
+          node --check infra/staging/certify-users.mjs
+          bash -n infra/staging/deploy.sh
       - name: Build isolated production API Docker image
         run: docker build -f infra/staging/api.Dockerfile -t family-os-api:b1-1 .
       - name: Check production image boots Node and includes migration scripts
