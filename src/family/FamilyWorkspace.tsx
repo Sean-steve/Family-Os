@@ -227,9 +227,9 @@ export default function FamilyWorkspace({ data, onChange, onToast, navigate }: P
       const next = prev.households.map(h => h.id === id ? { ...h, status: "ARCHIVED" as const, isPrimary: false } : h);
       if (!next.some(h => h.status === "ACTIVE" && h.isPrimary)) {
         const first = next.find(h => h.status === "ACTIVE");
-        return first ? setPrimaryHousehold(next, first.id) : next;
+        return { ...prev, households: first ? setPrimaryHousehold(next, first.id) : next };
       }
-      return next;
+      return { ...prev, households: next };
     });
     setEditingHouseholdId(null);
     onToast("Household archived, history preserved");
