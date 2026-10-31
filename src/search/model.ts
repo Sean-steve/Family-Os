@@ -23,6 +23,8 @@ export function buildSearchIndex(data:AppData):SearchEntry[]{
     .map(n=>({id:"route:"+n.label,title:n.label,route:n.label,area:"Navigation",kind:"WORKSPACE",
       subtitle:privateAreas.has(n.label)?"Open workspace · private records are never globally indexed":"Open workspace · Phase "+n.phase,
       accessibilityNote:privateAreas.has(n.label)?"Navigation only; no private records indexed.":"Navigate to owning workspace."}));
+  workspace.push({id:"route:Settings",title:"Settings",route:"Settings",area:"Navigation",kind:"WORKSPACE",
+    subtitle:"Browser preferences, privacy limits and sample reset",accessibilityNote:"Opens local preview settings; no account controls."});
   const tasks:SearchEntry[]=data.tasks.filter(t=>!t.archived&&sharedCategory(t.category)).map(t=>({
     id:"task:"+t.id,title:t.title,subtitle:"Shared responsibility · open task workspace",
     route:"Responsibilities",area:"Responsibilities",kind:"SHARED_RECORD",sourceId:t.id,
@@ -58,7 +60,7 @@ export function searchGroups(items:SearchEntry[]):{area:SearchArea;items:SearchE
   return order.map(area=>({area,items:items.filter(x=>x.area===area)})).filter(g=>g.items.length>0);
 }
 export function routeFromSearch(entry:SearchEntry):string {
-  return navItems.some(n=>n.label===entry.route)?entry.route:"Dashboard";
+  return entry.route==="Settings"||navItems.some(n=>n.label===entry.route)?entry.route:"Dashboard";
 }
 export function locationFromSearch(entry:SearchEntry):{route:string;title:string;date:string;kind:SearchEntry["kind"]}{
   return {route:routeFromSearch(entry),title:entry.title,date:entry.referenceDate||"",kind:entry.kind};
