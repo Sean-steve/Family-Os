@@ -2,7 +2,7 @@ import {useEffect,useState,type FormEvent} from "react";
 import {ArrowRight,Award,BookOpen,CalendarDays,Check,CheckCircle2,ChevronRight,Compass,Edit3,Flag,Heart,Info,Plus,Rocket,Search,ShieldCheck,Sparkles,Sprout,Target,TrendingUp,UsersRound,X} from "lucide-react";
 import type {AppData,Goal,Member} from "../data";
 import {activeMembers,freshId} from "../family/model";
-import {clampProgress,goalHistoryLabel,missionProgress,milestoneProgress,objectiveProgress,overallProgress,recordGoalProgress,relatedGoals,strategyToday,validParent} from "./model";
+import {clampProgress,goalHistoryLabel,missionProgress,milestoneProgress,objectiveProgress,overallProgress,recordGoalProgress,strategyToday,validParent} from "./model";
 import type {FamilyValue,Mission,Milestone,Objective,StrategyReview,StrategyStatus} from "./model";
 import "./strategy.css";
 
@@ -50,7 +50,6 @@ export default function StrategyWorkspace({data,onChange,onToast,navigate,initia
     (x.title+" "+x.meta+" "+(x.description||"")).toLowerCase().includes(query.toLowerCase()));
   const progress=overallProgress(strategy,goals);
   const goalDetails=goals.find(x=>x.id===detail);
-  const completedGoals=goals.filter(x=>x.status==="COMPLETED"||x.progress===100).length;
   const nextMilestone=visibleMilestones.filter(x=>x.targetDate&&x.targetDate>=strategyToday()&&x.status==="ACTIVE")
     .sort((a,b)=>a.targetDate.localeCompare(b.targetDate))[0];
   useEffect(()=>{if(initialAction==="Goal")open("Goal");if(initialAction)onInitialActionConsumed?.();
