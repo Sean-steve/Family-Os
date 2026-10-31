@@ -1,8 +1,8 @@
 import {useEffect,useState,type FormEvent} from "react";
 import {
   Archive,ArrowRight,BadgeCheck,BookOpen,CalendarDays,Check,CheckCircle2,ChevronRight,
-  CircleAlert,Clock3,ClipboardList,Edit3,FileText,Flag,HeartHandshake,History,Home,
-  Info,LockKeyhole,MessageSquareText,Plus,Scale,Search,ShieldCheck,Sparkles,ThumbsDown,
+  CircleAlert,Clock3,Edit3,Flag,HeartHandshake,History,
+  LockKeyhole,MessageSquareText,Plus,Scale,Search,ShieldCheck,Sparkles,ThumbsDown,
   ThumbsUp,UsersRound,Vote,X
 } from "lucide-react";
 import type {AppData,Member} from "../data";
@@ -13,8 +13,8 @@ import {
   recordDecisionApproval,reviseConstitution,startDecision,tallyDecision
 } from "./model";
 import type {
-  Decision,DecisionCategory,DecisionOption,DecisionRule,FamilyMeeting,FamilyPolicy,
-  GovernanceState,PolicyCategory,Constitution,CharterArticle,DecisionStatus
+  Decision,DecisionCategory,DecisionRule,FamilyMeeting,FamilyPolicy,
+  GovernanceState,PolicyCategory,Constitution,DecisionStatus
 } from "./model";
 import "./governance.css";
 type Tab="Overview"|"Decisions"|"Constitution"|"Policies"|"Family Meetings"|"Activity";
@@ -79,7 +79,6 @@ export default function GovernanceWorkspace({data,onChange,onToast,navigate}:Pro
   const [charterDraft,setCharterDraft]=useState<Constitution|null>(null);
   const [error,setError]=useState("");
   const [showArchived,setShowArchived]=useState(false);
-  const actor=members.find(m=>m.id===actorId);
   const name=(id:string)=>data.members.find(m=>m.id===id)?.name||"Unknown family member";
   const household=(id:string)=>houses.find(h=>h.id===id)?.name||"Whole family";
   const selected=state.decisions.find(d=>d.id===selectedId);
