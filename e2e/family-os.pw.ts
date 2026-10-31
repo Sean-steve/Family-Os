@@ -117,3 +117,17 @@ test("search and command center pass automated serious/critical WCAG semantics (
     .withTags(["wcag2a","wcag2aa"]).disableRules(["color-contrast"]).analyze();
   expect(result.violations.filter(v=>["critical","serious"].includes(v.impact||""))).toEqual([]);
 });
+
+test("preview Settings expose local security limits and require explicit reset confirmation",async({page})=>{
+  await page.goto("/Family-Os/#/Settings");
+  await expect(page.getByText("LocalStorage is not private family storage.")).toBeVisible();
+  await expect(page.getByText("Restore fictional sample data")).toBeVisible();
+  await page.getByRole("button",{name:"Reset browser preview"}).click();
+  const dialog=page.getByRole("dialog",{name:"Confirm reset sample data"});
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("button",{name:"Reset sample dataset"})).toBeDisabled();
+  await dialog.getByRole("textbox",{name:"Type RESET to confirm"}).fill("RESET");
+  await dialog.getByRole("button",{name:"Reset sample dataset"}).click();
+  await expect(page).toHaveURL(/#\/Dashboard$/);
+  await expect(page.getByRole("dialog",{name:"Confirm reset sample data"})).toHaveCount(0);
+});
