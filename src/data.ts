@@ -1,10 +1,12 @@
+import { seedFamily, type FamilyData } from "./family/model";
 export type Member = { id: string; name: string; role: string; avatar: number; color: string };
 export type Task = { id: string; title: string; person: string; due: string; done: boolean };
 export type Goal = { id: string; title: string; meta: string; progress: number; image: string; color: "green" | "blue"; };
 export type PlanEvent = { id: string; time: string; title: string; note: string; attendees: string[]; color: string; done?: boolean };
 export type Upcoming = { id: string; when: string; title: string; detail: string; icon: string; tint: string };
-export type AppData = { members: Member[]; tasks: Task[]; goals: Goal[]; events: PlanEvent[]; upcoming: Upcoming[]; notificationsSeen: boolean };
+export type AppData = { members: Member[]; family: FamilyData; tasks: Task[]; goals: Goal[]; events: PlanEvent[]; upcoming: Upcoming[]; notificationsSeen: boolean };
 export const seed: AppData = {
+  family: seedFamily,
   members: [
     { id: "alex", name: "Alex", role: "Owner", avatar: 12, color: "#cee6ff" },
     { id: "jamie", name: "Jamie", role: "Co-parent", avatar: 47, color: "#ffe0db" },
