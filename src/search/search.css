@@ -18,7 +18,7 @@
 .se-result-status span{color:#94a5bb;font-size:10px}
 .se-results{min-height:120px;max-height:480px;overflow:auto;scrollbar-width:thin}
 .se-group{margin:8px 0 15px}
-.se-group h2{font:800 11px Manrope,sans-serif;color:#93a8c3;text-transform:uppercase;letter-spacing:.11em;margin:0 4px 6px}
+.se-group-heading{font:800 11px Manrope,sans-serif;color:#93a8c3;text-transform:uppercase;letter-spacing:.11em;margin:0 4px 6px}
 .se-result{display:flex;align-items:center;gap:12px;text-align:left;background:none;border:1px solid transparent;border-radius:9px;padding:11px 12px;width:100%}
 .se-result:hover,.se-result:focus-visible,.se-result[aria-selected="true"]{border-color:#c8dffa;background:#f2f7ff}
 .se-result-icon{background:#e9f2ff;color:#3979dd;width:37px;height:37px;border-radius:10px;display:grid;place-items:center;flex:none}
