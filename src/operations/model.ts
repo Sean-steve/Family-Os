@@ -102,7 +102,7 @@ export function toggleTaskForDate(task:Task,target:string):Task {
   return {...task,completedDates:[...dates].sort()};
 }
 export function overdueTasks(tasks:Task[],target=dateKey(),base=dateKey()):Task[] {
-  return tasks.filter(t=>!t.archived&&taskAnchor(t,base)<target&&!t.repeat&&!t.done);
+  return tasks.filter(t=>!t.archived&&taskAnchor(t,base)<target&&(!t.repeat||t.repeat==="NONE")&&!t.done);
 }
 export function taskLoadByMember(tasks:Task[],members:string[],day:string,base=dateKey()):Record<string,number> {
   const counts:Record<string,number>=Object.fromEntries(members.map(id=>[id,0]));
