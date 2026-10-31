@@ -18,8 +18,11 @@ const auth=async(sub:string)=>{
     .setIssuer(issuer).setAudience(audience).setSubject(sub).setIssuedAt().setExpirationTime("12m").sign(key);
   return {authorization:"Bearer "+jwt};
 };
-const req=async(sub:string,method:"GET"|"POST"|"PATCH"|"DELETE",url:string,body?:unknown)=>
-  app.inject({method,url,headers:await auth(sub),...(body===undefined?{}:{payload:body})});
+const req=async(sub:string,method:"GET"|"POST"|"PATCH"|"DELETE",url:string,body?:unknown)=>{
+  const response=await app.inject({method,url,headers:await auth(sub),
+    ...(body===undefined?{}:{payload:body})} as import("light-my-request").InjectOptions);
+  return response;
+};
 
 beforeAll(async()=>{
   if(!process.env.DATABASE_URL||!process.env.DATABASE_ADMIN_URL)throw new Error("B1 requires migrated PostgreSQL.");
