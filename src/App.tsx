@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import {
   Activity, ArrowLeft, ArrowRight, Bell, BookHeart, CalendarDays,
@@ -16,6 +16,8 @@ import StrategyWorkspace from "./strategy/StrategyWorkspace";
 import GovernanceWorkspace from "./governance/GovernanceWorkspace";
 import FamilyLifeWorkspace from "./life/FamilyLifeWorkspace";
 import IntelligenceWorkspace from "./intelligence/IntelligenceWorkspace";
+import GlobalSearch from "./search/GlobalSearch";
+import {type SearchEntry,routeFromSearch} from "./search/model";
 import { deriveSignals, migrateIntelligence } from "./intelligence/model";
 import { normalizeLife } from "./life/model";
 import { normalizeGovernance, decisionNeedsInput } from "./governance/model";
@@ -99,7 +101,7 @@ export default function App() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [familyOpen, setFamilyOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchTarget, setSearchTarget] = useState<SearchEntry | null>(null);
   const [addKind, setAddKind] = useState<"Task" | "Goal" | "Event" | "Member" | null>(null);
   const [draftTitle, setDraftTitle] = useState("");
   const [draftExtra, setDraftExtra] = useState("");
@@ -108,7 +110,6 @@ export default function App() {
   const [operationsAction, setOperationsAction] = useState<"Task" | "Event" | null>(null);
   const [strategyAction, setStrategyAction] = useState<"Goal" | null>(null);
   const [sampleVisible, setSampleVisible] = useState(true);
-  const searchInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     try { window.localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch { /* storage unavailable */ }
@@ -129,17 +130,21 @@ export default function App() {
     window.addEventListener("keydown", keyboard);
     return () => { window.removeEventListener("hashchange", hashChanged); window.removeEventListener("keydown", keyboard); };
   }, []);
-  useEffect(() => { if (searchOpen) searchInput.current?.focus(); }, [searchOpen]);
   useEffect(() => {
     if (!toast) return;
     const handle = window.setTimeout(() => setToast(""), 3200);
     return () => window.clearTimeout(handle);
   }, [toast]);
 
-  const navigate = (next: string) => {
+  const navigate = (next: string, fromSearch = false) => {
+    if (!fromSearch) setSearchTarget(null);
     window.location.hash = "#/" + encodeURIComponent(next);
     setRoute(next); setMenuOpen(false); setSearchOpen(false); setNotificationsOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const chooseSearch = (entry: SearchEntry) => {
+    setSearchTarget(entry.kind==="SHARED_RECORD"?entry:null);
+    navigate(routeFromSearch(entry),true);
   };
   const openAdd = (kind: "Task" | "Goal" | "Event" | "Member") => {
     if (kind === "Task" || kind === "Event") {
@@ -177,17 +182,6 @@ export default function App() {
     ...prev, events: prev.events.map(e => e.id === eventId ? { ...e, done: !e.done } : e)
   }));
   const showDetails = (title: string, body: string, kind: string) => setDetails({ title, body, kind });
-  const searchItems = [
-    ...navItems.map(n => ({ title: n.label, sub: "Navigate · Phase " + n.phase, page: n.label })),
-    ...data.goals.map(g => ({ title: g.title, sub: "Family goal · " + g.progress + "% complete", page: "Goals" })),
-    ...data.tasks.map(t => ({ title: t.title, sub: "Responsibility · " + t.person, page: "Responsibilities" })),
-    ...data.events.filter(e => e.status !== "CANCELLED").map(e => ({ title: e.title, sub: "Family calendar · " + (e.date || "Today"), page: "Calendar" })),
-    ...data.operations.routines.map(r => ({ title: r.name, sub: "Family routine", page: "Routines" })),
-    ...data.life.experiences.map(x => ({ title: x.title, sub: "Family experience", page: "Experiences" })),
-    ...data.life.memories.map(x => ({ title: x.title, sub: "Memory timeline", page: "Memory" })),
-    ...data.life.traditions.map(x => ({ title: x.title, sub: "Family tradition", page: "Traditions" })),
-    ...data.life.legacy.map(x => ({ title: x.title, sub: "Family legacy", page: "Legacy" }))
-  ].filter(item => (item.title + " " + item.sub).toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 9);
   const familyMembers = activeMembers(data.members, data.family);
   const dashboardEvents = eventsOnDate(data.events, dateKey());
   const upcomingLocalEvents = eventsBetween(data.events, shiftDate(dateKey(),1), shiftDate(dateKey(),7))
@@ -206,8 +200,8 @@ export default function App() {
       <nav aria-label="Main navigation" className="side-nav">
         {navItems.map(item => {
           const Icon = icons[item.icon];
-          return <button key={item.label} onClick={() => item.label === "Search" ? setSearchOpen(true) : navigate(item.label)}
-            className={"nav-item " + (route === item.label ? "active" : "")}>
+          return <button key={item.label} onClick={() => navigate(item.label)}
+            className={"nav-item " + (route === item.label ? "active" : "")} aria-current={route===item.label?"page":undefined}>
             <Icon size={19} strokeWidth={1.8} /><span>{item.label}</span></button>;
         })}
       </nav>
@@ -372,13 +366,14 @@ export default function App() {
       </> : route === "Family" ? <FamilyWorkspace data={data} onChange={setData} onToast={setToast} navigate={navigate} /> :
       (route === "Plan" || route === "Calendar" || route === "Responsibilities" || route === "Routines") ?
       <OperationsWorkspace route={route} data={data} onChange={setData} onToast={setToast} navigate={navigate}
-        initialAction={operationsAction} onInitialActionConsumed={() => setOperationsAction(null)} /> :
+        searchFocus={searchTarget?.route===route?searchTarget:undefined} initialAction={operationsAction} onInitialActionConsumed={() => setOperationsAction(null)} /> :
       route === "Goals" ? <StrategyWorkspace data={data} onChange={setData} onToast={setToast} navigate={navigate}
-        initialAction={strategyAction} onInitialActionConsumed={() => setStrategyAction(null)} /> :
+        searchFocus={searchTarget?.route===route?searchTarget:undefined} initialAction={strategyAction} onInitialActionConsumed={() => setStrategyAction(null)} /> :
       route === "Decisions" ? <GovernanceWorkspace data={data} onChange={setData} onToast={setToast} navigate={navigate} /> :
       (route === "Experiences" || route === "Memory" || route === "Traditions" || route === "Legacy") ?
       <FamilyLifeWorkspace route={route} data={data} onChange={setData} onToast={setToast} navigate={navigate} /> :
       route === "Insights" ? <IntelligenceWorkspace data={data} onChange={setData} onToast={setToast} navigate={navigate} /> :
+      route === "Search" ? <GlobalSearch data={data} onSelect={chooseSearch} /> :
       <main className="phase-page">
         <button className="back-link" onClick={() => navigate("Dashboard")}><ArrowLeft size={17}/> Back to dashboard</button>
         <div className="phase-hero"><span className="phase-tag">Planned for Phase {phase}</span><span className="phase-icon"><Compass size={31}/></span><h1>{route}</h1><p>{navigationDescriptions[route] || "A dedicated Family OS workspace is planned for an upcoming development phase."}</p><div className="phase-actions"><button className="primary-button" onClick={() => navigate("Dashboard")}>Return to Family Command Center <ArrowRight size={17}/></button><button className="secondary-button" onClick={() => setSearchOpen(true)}><Search size={17}/> Search preview</button></div></div>
@@ -388,7 +383,10 @@ export default function App() {
 
     <div className="quick-actions"><button className="quick-add" aria-label="Quick add" onClick={() => openAdd("Task")}><Plus size={25}/></button><button className="quick-label" onClick={() => openAdd("Task")}>Quick add</button></div>
 
-    {searchOpen && <div className="modal-backdrop" onClick={() => setSearchOpen(false)}><section className="search-dialog" role="dialog" aria-modal="true" aria-label="Search Family OS" onClick={e => e.stopPropagation()}><div className="search-dialog-input"><Search size={22}/><input ref={searchInput} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search family, goals, events, screens..." aria-label="Search"/><button onClick={() => setSearchOpen(false)}><X size={19}/></button></div><div className="search-results">{searchItems.length ? searchItems.map((item, index) => <button key={item.page + item.title + index} onClick={() => navigate(item.page)}><span className="search-result-icon"><ArrowRight size={16}/></span><span><b>{item.title}</b><small>{item.sub}</small></span><ChevronRight size={16}/></button>) : <p>No matching preview items.</p>}</div><div className="search-hint"><Command size={13}/> Press Ctrl/⌘ + K to open search · Esc to close</div></section></div>}
+    {searchOpen && <div className="modal-backdrop se-backdrop" onClick={() => setSearchOpen(false)}>
+      <div onClick={e=>e.stopPropagation()}><GlobalSearch mode="modal" data={data}
+        onSelect={chooseSearch} onClose={()=>setSearchOpen(false)}/></div>
+    </div>}
 
     {addKind && <div className="modal-backdrop" onClick={() => setAddKind(null)}><section className="action-dialog" role="dialog" aria-modal="true" aria-label={"Add " + addKind} onClick={e => e.stopPropagation()}><div className="dialog-heading"><div><span className="dialog-eyebrow">FAMILY OS · LOCAL PREVIEW</span><h2>Add {addKind === "Task" ? "responsibility" : addKind.toLowerCase()}</h2></div><button className="close-dialog" onClick={() => setAddKind(null)} aria-label="Close dialog"><X size={19}/></button></div>
       <div className="kind-tabs">{(["Task","Goal","Event","Member"] as const).map(kind => <button type="button" className={kind === addKind ? "selected" : ""} key={kind} onClick={() => openAdd(kind)}>{kind}</button>)}</div>
