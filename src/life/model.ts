@@ -202,7 +202,12 @@ export function experienceAsCalendarEvent(exp:Experience):PlanEvent {
 }
 function addHour(time:string):string{
   const [h,m]=time.split(":").map(Number);
-  return String((h+1)%24).padStart(2,"0")+":"+String(m).padStart(2,"0");
+  if(!Number.isInteger(h)||!Number.isInteger(m)||h<0||h>23||m<0||m>59)
+    throw new Error("Choose a valid 24-hour start time.");
+  const start=h*60+m;
+  if(start>=1439)throw new Error("Choose a start time earlier than 23:59 for this one-day calendar preview.");
+  const end=Math.min(start+60,1439);
+  return String(Math.floor(end/60)).padStart(2,"0")+":"+String(end%60).padStart(2,"0");
 }
 export function nextTraditionDate(tradition:Tradition,from=lifeDate()):string|null{
   if(!validDate(from)||!tradition.active||tradition.cadence==="OCCASIONAL")return null;
