@@ -1,9 +1,13 @@
 import {loadConfig} from "./config.js";
 import {createRuntimePool} from "./database.js";
 import {createApi} from "./app.js";
+import {attestProvider} from "./discovery.js";
 
 async function main(){
   const config=loadConfig();
+  // Real staging/production process must verify its issuer before listening,
+  // unlike isolated unit tests that inject ephemeral signed mock tokens.
+  await attestProvider({issuer:config.issuer,audience:config.audience,jwksUri:config.jwksUri});
   const pool=createRuntimePool(config.databaseUrl);
   try{
     const app=await createApi({pool,oidc:{issuer:config.issuer,audience:config.audience,
