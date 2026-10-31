@@ -1,19 +1,21 @@
 import { seedFamily, type FamilyData } from "./family/model";
+import { seedStrategy, type StrategyState, type GoalExtension } from "./strategy/model";
 import { seedOperations, type OperationsState, type Repeat, type Category, type Priority } from "./operations/model";
 export type Member = { id: string; name: string; role: string; avatar: number; color: string };
 export type Task = { id: string; title: string; person: string; due: string; done: boolean;
   description?: string; category?: Category; dueDate?: string; assigneeIds?: string[];
   householdId?: string; priority?: Priority; repeat?: Repeat; completedDates?: string[];
   archived?: boolean; };
-export type Goal = { id: string; title: string; meta: string; progress: number; image: string; color: "green" | "blue"; };
+export type Goal = { id: string; title: string; meta: string; progress: number; image: string; color: "green" | "blue"; } & GoalExtension;
 export type PlanEvent = { id: string; time: string; title: string; note: string; attendees: string[]; color: string; done?: boolean;
   date?: string; endTime?: string; location?: string; householdId?: string; category?: Category;
   status?: "ACTIVE" | "CANCELLED"; };
 export type Upcoming = { id: string; when: string; title: string; detail: string; icon: string; tint: string };
-export type AppData = { members: Member[]; family: FamilyData; operations: OperationsState; tasks: Task[]; goals: Goal[]; events: PlanEvent[]; upcoming: Upcoming[]; notificationsSeen: boolean };
+export type AppData = { members: Member[]; family: FamilyData; operations: OperationsState; strategy: StrategyState; tasks: Task[]; goals: Goal[]; events: PlanEvent[]; upcoming: Upcoming[]; notificationsSeen: boolean };
 export const seed: AppData = {
   family: seedFamily,
   operations: seedOperations,
+  strategy: seedStrategy,
   members: [
     { id: "alex", name: "Alex", role: "Owner", avatar: 12, color: "#cee6ff" },
     { id: "jamie", name: "Jamie", role: "Co-parent", avatar: 47, color: "#ffe0db" },
@@ -28,9 +30,9 @@ export const seed: AppData = {
     { id: "t4", title: "Clean bedrooms", person: "Sam, Ella", due: "Tomorrow", done: false }
   ],
   goals: [
-    { id: "g1", title: "Europe Family Trip", meta: "Family adventure", progress: 75, image: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=170&h=170&fit=crop", color: "green" },
-    { id: "g2", title: "Build Emergency Fund", meta: "Family security", progress: 40, image: "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=170&h=170&fit=crop", color: "blue" },
-    { id: "g3", title: "Healthier Habits", meta: "Family wellness", progress: 60, image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=170&h=170&fit=crop", color: "green" }
+    { id: "g1", title: "Europe Family Trip", meta: "Family adventure", progress: 75, objectiveId: "objective-trip", status: "ACTIVE", ownerIds: ["alex","jamie"], history: [], image: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=170&h=170&fit=crop", color: "green" },
+    { id: "g2", title: "Build Emergency Fund", meta: "Family security", progress: 40, objectiveId: "objective-reserve", status: "ACTIVE", ownerIds: ["alex","jamie"], history: [], image: "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=170&h=170&fit=crop", color: "blue" },
+    { id: "g3", title: "Healthier Habits", meta: "Family wellness", progress: 60, objectiveId: "objective-habits", status: "ACTIVE", ownerIds: ["alex","jamie"], history: [], image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=170&h=170&fit=crop", color: "green" }
   ],
   events: [
     { id: "e1", time: "7:00 AM", title: "Morning routine", note: "Kids", attendees: ["sam", "ella", "noah"], color: "#b6dc62", done: true },

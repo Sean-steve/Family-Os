@@ -12,6 +12,8 @@ import { seed, navItems, navigationDescriptions } from "./data";
 import type { AppData, Goal, Member } from "./data";
 import FamilyWorkspace from "./family/FamilyWorkspace";
 import OperationsWorkspace from "./operations/OperationsWorkspace";
+import StrategyWorkspace from "./strategy/StrategyWorkspace";
+import { migrateStrategy, normalizedGoals, recordGoalProgress } from "./strategy/model";
 import { clockDisplay, dateKey, dateLabel, eventDate, eventsBetween, eventsOnDate, normalizeOperations, tasksOnDate, taskDoneOn, toggleTaskForDate, shiftDate } from "./operations/model";
 import { activeMembers, migrateFamilyData, profileFor } from "./family/model";
 
@@ -36,7 +38,7 @@ function readPreview(): AppData {
         Array.isArray(parsed.members) && Array.isArray(parsed.tasks) &&
         "goals" in parsed && Array.isArray(parsed.goals) &&
         "events" in parsed && Array.isArray(parsed.events) &&
-        "upcoming" in parsed && Array.isArray(parsed.upcoming)) return { ...(parsed as AppData), family: migrateFamilyData((parsed as Partial<AppData>).family), operations: normalizeOperations((parsed as Partial<AppData>).operations) };
+        "upcoming" in parsed && Array.isArray(parsed.upcoming)) return { ...(parsed as AppData), family: migrateFamilyData((parsed as Partial<AppData>).family), operations: normalizeOperations((parsed as Partial<AppData>).operations), strategy: migrateStrategy((parsed as Partial<AppData>).strategy), goals: normalizedGoals((parsed as AppData).goals) };
   } catch { /* local storage can be disabled; use preview state */ }
   return seed;
 }
@@ -98,6 +100,7 @@ export default function App() {
   const [details, setDetails] = useState<{ title: string; body: string; kind: string } | null>(null);
   const [toast, setToast] = useState("");
   const [operationsAction, setOperationsAction] = useState<"Task" | "Event" | null>(null);
+  const [strategyAction, setStrategyAction] = useState<"Goal" | null>(null);
   const [sampleVisible, setSampleVisible] = useState(true);
   const searchInput = useRef<HTMLInputElement>(null);
 
@@ -138,6 +141,9 @@ export default function App() {
       setOperationsAction(kind);
       navigate(kind === "Task" ? "Responsibilities" : "Calendar");
       return;
+    }
+    if (kind === "Goal") {
+      setAddKind(null); setStrategyAction("Goal"); navigate("Goals"); return;
     }
     setDraftTitle(""); setDraftExtra(""); setAddKind(kind);
   };
@@ -254,7 +260,7 @@ export default function App() {
 
           <section className="metrics" aria-label="Family overview">
             <MetricCard title="Today" value={dashboardEvents.length} foot="events" icon={CalendarDays} tone="blue" onClick={() => navigate("Calendar")}/>
-            <MetricCard title="Family Goals" value={data.goals.length} foot="On track" icon={Target} tone="rose" onClick={() => openAdd("Goal")}/>
+            <MetricCard title="Family Goals" value={data.goals.filter(g => g.status !== "ARCHIVED").length} foot="Tracked locally" icon={Target} tone="rose" onClick={() => openAdd("Goal")}/>
             <MetricCard title="Responsibilities" value={dashboardTasks.length} foot={percent + "% completed"} icon={CheckCircle2} tone="green" onClick={() => openAdd("Task")}/>
             <MetricCard title="Decisions" value="2" foot="awaiting input" icon={UsersRound} tone="purple" onClick={() => navigate("Decisions")}/>
             <MetricCard title="Family Health" value="Good" foot="sample status" icon={Heart} tone="green" onClick={() => showDetails("Family Health","This is an illustrative dashboard indicator only; no health information is connected. Health context will require consent and an authorised integration.","Preview indicator")}/>
@@ -347,6 +353,8 @@ export default function App() {
       (route === "Plan" || route === "Calendar" || route === "Responsibilities" || route === "Routines") ?
       <OperationsWorkspace route={route} data={data} onChange={setData} onToast={setToast} navigate={navigate}
         initialAction={operationsAction} onInitialActionConsumed={() => setOperationsAction(null)} /> :
+      route === "Goals" ? <StrategyWorkspace data={data} onChange={setData} onToast={setToast} navigate={navigate}
+        initialAction={strategyAction} onInitialActionConsumed={() => setStrategyAction(null)} /> :
       <main className="phase-page">
         <button className="back-link" onClick={() => navigate("Dashboard")}><ArrowLeft size={17}/> Back to dashboard</button>
         <div className="phase-hero"><span className="phase-tag">Planned for Phase {phase}</span><span className="phase-icon"><Compass size={31}/></span><h1>{route}</h1><p>{navigationDescriptions[route] || "A dedicated Family OS workspace is planned for an upcoming development phase."}</p><div className="phase-actions"><button className="primary-button" onClick={() => navigate("Dashboard")}>Return to Family Command Center <ArrowRight size={17}/></button><button className="secondary-button" onClick={() => setSearchOpen(true)}><Search size={17}/> Search preview</button></div></div>
@@ -365,7 +373,7 @@ export default function App() {
         <p className="dialog-privacy"><ShieldCheck size={15}/> Saved to this browser only. No data is sent to a server.</p><div className="dialog-actions"><button type="button" className="secondary-button" onClick={() => setAddKind(null)}>Cancel</button><button className="primary-button" type="submit"><Plus size={17}/> Add {addKind}</button></div></form>
       </section></div>}
 
-    {details && <div className="modal-backdrop" onClick={() => setDetails(null)}><section className="action-dialog detail-dialog" role="dialog" aria-modal="true" aria-label={details.title} onClick={e => e.stopPropagation()}><div className="dialog-heading"><div><span className="dialog-eyebrow">{details.kind.startsWith("Goal:") ? "FAMILY GOAL" : details.kind.toUpperCase()}</span><h2>{details.title}</h2></div><button className="close-dialog" onClick={() => setDetails(null)} aria-label="Close"><X size={19}/></button></div><p className="detail-copy">{details.body}</p>{details.kind.startsWith("Goal:") && <div className="goal-adjust"><span>Adjust preview progress</span><div><button className="secondary-button" onClick={() => {const target = details.kind.slice(5); setData(prev => ({...prev,goals:prev.goals.map((g:Goal) => g.id === target ? {...g,progress:Math.max(0,g.progress-10)} : g)}));}}>− 10%</button><button className="primary-button" onClick={() => {const target = details.kind.slice(5); setData(prev => ({...prev,goals:prev.goals.map((g:Goal) => g.id === target ? {...g,progress:Math.min(100,g.progress+10)} : g)}));}}>+ 10%</button></div></div>}<button className="secondary-button detail-close" onClick={() => setDetails(null)}>Close</button></section></div>}
+    {details && <div className="modal-backdrop" onClick={() => setDetails(null)}><section className="action-dialog detail-dialog" role="dialog" aria-modal="true" aria-label={details.title} onClick={e => e.stopPropagation()}><div className="dialog-heading"><div><span className="dialog-eyebrow">{details.kind.startsWith("Goal:") ? "FAMILY GOAL" : details.kind.toUpperCase()}</span><h2>{details.title}</h2></div><button className="close-dialog" onClick={() => setDetails(null)} aria-label="Close"><X size={19}/></button></div><p className="detail-copy">{details.body}</p>{details.kind.startsWith("Goal:") && <div className="goal-adjust"><span>Adjust preview progress</span><div><button className="secondary-button" onClick={() => {const target = details.kind.slice(5); setData(prev => ({...prev,goals:prev.goals.map((g:Goal) => g.id === target ? recordGoalProgress(g,g.progress-10,"Dashboard quick update",new Date().toISOString()) : g)}));}}>− 10%</button><button className="primary-button" onClick={() => {const target = details.kind.slice(5); setData(prev => ({...prev,goals:prev.goals.map((g:Goal) => g.id === target ? recordGoalProgress(g,g.progress+10,"Dashboard quick update",new Date().toISOString()) : g)}));}}>+ 10%</button></div></div>}<button className="secondary-button detail-close" onClick={() => setDetails(null)}>Close</button></section></div>}
 
     {toast && <div className="toast" role="status"><CheckCircle2 size={18}/>{toast}</div>}
   </div>;
