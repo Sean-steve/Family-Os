@@ -44,9 +44,8 @@ const roleAccess: { capability: string; roles: FamilyRole[] }[] = [
 ];
 
 function Avatar({ member, size = "default" }: { member: Member; size?: "small" | "default" | "large" }) {
-  const [broken, setBroken] = useState(false);
-  return <span className={"family-avatar family-avatar-" + size} style={{ background: member.color }} title={member.name}>
-    {!broken && member.avatar > 0 && <img src={"https://i.pravatar.cc/120?img=" + member.avatar} loading="lazy" alt="" onError={() => setBroken(true)} />}
+  return <span className={"family-avatar family-avatar-" + size}
+    style={{ background: member.color }} title={member.name} aria-label={member.name}>
     <span>{member.name.charAt(0).toUpperCase()}</span>
   </span>;
 }
