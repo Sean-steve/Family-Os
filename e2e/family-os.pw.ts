@@ -131,3 +131,46 @@ test("preview Settings expose local security limits and require explicit reset c
   await expect(page).toHaveURL(/#\/Dashboard$/);
   await expect(page.getByRole("dialog",{name:"Confirm reset sample data"})).toHaveCount(0);
 });
+
+test("complete family journey: experience -> calendar -> memory -> legacy with canonical links",async({page})=>{
+  const title="Phase 8 family picnic";
+  await page.goto("/Family-Os/#/Experiences");
+  await page.getByRole("button",{name:"Plan an Experience"}).click();
+  const expForm=page.getByRole("dialog",{name:"Experience editor"});
+  await expForm.getByLabel("Experience name").fill(title);
+  await expForm.getByLabel("Stage").selectOption("PLANNED");
+  await expForm.getByLabel("Date").fill("2026-11-08");
+  await expForm.getByLabel("Time").fill("14:00");
+  await expForm.getByLabel("What should we experience together?").fill("A fictional afternoon picnic to demonstrate connected records.");
+  await expForm.getByRole("button",{name:"Save Experience"}).click();
+  const expCard=page.locator(".lf-experience-card").filter({hasText:title});
+  await expect(expCard).toBeVisible();
+  await expCard.getByRole("button",{name:"Add to calendar"}).click();
+  await expect(expCard.getByText("Calendar link")).toBeVisible();
+  await expCard.getByRole("button",{name:"Mark experienced"}).click();
+  await expCard.getByRole("button",{name:"Capture memory"}).click();
+  const memoryForm=page.getByRole("dialog",{name:"Memory editor"});
+  await expect(memoryForm.getByLabel("Memory title")).toHaveValue(title);
+  await memoryForm.getByRole("button",{name:"Save Memory"}).click();
+  await page.getByRole("navigation",{name:"Main navigation"}).getByRole("button",{name:"Memory"}).click();
+  const memoryCard=page.locator(".lf-memory-card").filter({hasText:title});
+  await expect(memoryCard).toBeVisible();
+  await memoryCard.getByRole("button",{name:"Add to legacy"}).click();
+  const legacyForm=page.getByRole("dialog",{name:"Legacy editor"});
+  await expect(legacyForm.getByLabel("Legacy entry title")).toHaveValue(title);
+  await legacyForm.getByRole("button",{name:"Save Legacy"}).click();
+  await page.getByRole("navigation",{name:"Main navigation"}).getByRole("button",{name:"Legacy"}).click();
+  await expect(page.locator(".lf-legacy-card").filter({hasText:title})).toBeVisible();
+  const consistency=await page.evaluate((name)=>{
+    const s=JSON.parse(localStorage.getItem("family-os-preview-v1")||"{}");
+    const exp=s.life.experiences.find((e:{title:string})=>e.title===name);
+    const memory=s.life.memories.find((m:{experienceId:string})=>m.experienceId===exp.id);
+    const legacy=s.life.legacy.find((l:{linkedMemoryIds:string[]})=>l.linkedMemoryIds.includes(memory.id));
+    return {calendarLinked:s.events.some((e:{id:string})=>e.id===exp.linkedEventId),
+      memoryLinked:!!memory,legacyLinked:!!legacy,
+      eventCount:s.events.filter((e:{id:string})=>e.id===exp.linkedEventId).length};
+  },title);
+  expect(consistency).toEqual({calendarLinked:true,memoryLinked:true,legacyLinked:true,eventCount:1});
+  await page.reload();
+  await expect(page.locator(".lf-legacy-card").filter({hasText:title})).toBeVisible();
+});
