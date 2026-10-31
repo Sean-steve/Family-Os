@@ -15,6 +15,8 @@ import OperationsWorkspace from "./operations/OperationsWorkspace";
 import StrategyWorkspace from "./strategy/StrategyWorkspace";
 import GovernanceWorkspace from "./governance/GovernanceWorkspace";
 import FamilyLifeWorkspace from "./life/FamilyLifeWorkspace";
+import IntelligenceWorkspace from "./intelligence/IntelligenceWorkspace";
+import { deriveSignals, migrateIntelligence } from "./intelligence/model";
 import { normalizeLife } from "./life/model";
 import { normalizeGovernance, decisionNeedsInput } from "./governance/model";
 import { migrateStrategy, normalizedGoals, recordGoalProgress } from "./strategy/model";
@@ -42,7 +44,7 @@ function readPreview(): AppData {
         Array.isArray(parsed.members) && Array.isArray(parsed.tasks) &&
         "goals" in parsed && Array.isArray(parsed.goals) &&
         "events" in parsed && Array.isArray(parsed.events) &&
-        "upcoming" in parsed && Array.isArray(parsed.upcoming)) return { ...(parsed as AppData), family: migrateFamilyData((parsed as Partial<AppData>).family), operations: normalizeOperations((parsed as Partial<AppData>).operations), strategy: migrateStrategy((parsed as Partial<AppData>).strategy), governance: normalizeGovernance((parsed as Partial<AppData>).governance), life: normalizeLife((parsed as Partial<AppData>).life), goals: normalizedGoals((parsed as AppData).goals) };
+        "upcoming" in parsed && Array.isArray(parsed.upcoming)) return { ...(parsed as AppData), family: migrateFamilyData((parsed as Partial<AppData>).family), operations: normalizeOperations((parsed as Partial<AppData>).operations), strategy: migrateStrategy((parsed as Partial<AppData>).strategy), governance: normalizeGovernance((parsed as Partial<AppData>).governance), life: normalizeLife((parsed as Partial<AppData>).life), intelligence: migrateIntelligence((parsed as Partial<AppData>).intelligence), goals: normalizedGoals((parsed as AppData).goals) };
   } catch { /* local storage can be disabled; use preview state */ }
   return seed;
 }
@@ -193,6 +195,8 @@ export default function App() {
   const dashboardTasks = tasksOnDate(data.tasks, dateKey());
   const done = dashboardTasks.filter(t => taskDoneOn(t,dateKey())).length;
   const percent = dashboardTasks.length ? Math.round(done / dashboardTasks.length * 100) : 0;
+  const intelligenceSignals = deriveSignals(data,dateKey());
+  const evidenceAttention = intelligenceSignals.filter(signal=>signal.tone==="ATTENTION");
   const phase = navItems.find(item => item.label === route)?.phase || (route === "Personal Mode" ? 8 : 8);
 
   return <div className="app-shell">
@@ -271,19 +275,27 @@ export default function App() {
             <MetricCard title="Family Goals" value={data.goals.filter(g => g.status !== "ARCHIVED").length} foot="Tracked locally" icon={Target} tone="rose" onClick={() => openAdd("Goal")}/>
             <MetricCard title="Responsibilities" value={dashboardTasks.length} foot={percent + "% completed"} icon={CheckCircle2} tone="green" onClick={() => openAdd("Task")}/>
             <MetricCard title="Decisions" value={data.governance.decisions.filter(decisionNeedsInput).length} foot="need local input" icon={UsersRound} tone="purple" onClick={() => navigate("Decisions")}/>
-            <MetricCard title="Family Health" value="Good" foot="sample status" icon={Heart} tone="green" onClick={() => showDetails("Family Health","This is an illustrative dashboard indicator only; no health information is connected. Health context will require consent and an authorised integration.","Preview indicator")}/>
-            <MetricCard title="Risks & Alerts" value="1" foot="needs attention" icon={TriangleAlert} tone="orange" onClick={() => showDetails("Alerts","The alert cards are fictional design examples. Future risk intelligence will provide evidence, confidence, freshness and privacy controls.","Preview indicator")}/>
+            <MetricCard title="Data Connections" value="0" foot="external OS connected" icon={Heart} tone="blue" onClick={() => navigate("Insights")}/>
+            <MetricCard title="Evidence Alerts" value={evidenceAttention.length} foot="dated items to review" icon={TriangleAlert} tone="orange" onClick={() => navigate("Insights")}/>
           </section>
 
           <section className="content-grid top-content">
             <article className="panel attention">
               <CardTitle>What Matters Now</CardTitle>
               <div className="attention-list">
-                <button className="attention-row attention-red" onClick={() => navigate("Decisions")}><span className="attention-symbol"><AlertCircle size={18}/></span><span className="attention-copy"><strong>Family decision needs your input</strong><small>Summer holiday destination</small></span><MemberStack ids={["alex","jamie"]} members={data.members}/><em>2 days left</em></button>
-                <button className="attention-row attention-amber" onClick={() => showDetails("School permission form","Ella's science camp permission form is due today. The document and school integration are preview concepts for a later phase.","Due today")}><span className="attention-symbol"><TriangleAlert size={18}/></span><span className="attention-copy"><strong>School permission form due</strong><small>Ella — Science camp</small></span><em>Today</em></button>
-                <button className="attention-row attention-blue" onClick={() => showDetails("Car service due","Vehicle maintenance is shown here as an illustrative Asset OS signal. Live maintenance records will remain in Asset OS.","Asset context")}><span className="attention-symbol"><Info size={18}/></span><span className="attention-copy"><strong>Car service due</strong><small>Toyota Kluger · 45,000 km service</small></span><em>This week</em></button>
-                <button className="attention-row attention-green" onClick={() => showDetails("Family goal update","The example Europe trip goal is 75% complete. You can edit its progress from the Family Goals card.","Goal progress")}><span className="attention-symbol"><CheckCircle2 size={19}/></span><span className="attention-copy"><strong>Family goal update</strong><small>Save for Europe Trip is 75% complete</small></span><em>Great progress!</em></button>
-                <button className="attention-row attention-purple" onClick={() => navigate("Plan")}><span className="attention-symbol"><CalendarDays size={18}/></span><span className="attention-copy"><strong>Weekly family meeting</strong><small>Plan next week and review goals</small></span><em>Tonight · 7:00 PM</em></button>
+                {intelligenceSignals.slice(0,5).map(signal=><button key={signal.id}
+                  className={"attention-row "+(signal.tone==="ATTENTION"?"attention-amber":signal.tone==="CELEBRATE"?"attention-green":"attention-blue")}
+                  onClick={()=>navigate("Insights")}>
+                  <span className="attention-symbol">{signal.tone==="ATTENTION"?<TriangleAlert size={18}/>:<Lightbulb size={18}/>}</span>
+                  <span className="attention-copy"><strong>{signal.title}</strong>
+                    <small>{signal.domain} · {signal.evidence.length} documented source record(s)</small></span>
+                  <em>Review evidence</em>
+                </button>)}
+                {!intelligenceSignals.length&&<button className="attention-row attention-blue" onClick={()=>navigate("Insights")}>
+                  <span className="attention-symbol"><Info size={18}/></span>
+                  <span className="attention-copy"><strong>No rule-matched family signals</strong>
+                    <small>Insufficient evidence is not a family wellbeing or safety verdict.</small></span><em>View data gaps</em>
+                </button>}
               </div>
             </article>
 
@@ -366,6 +378,7 @@ export default function App() {
       route === "Decisions" ? <GovernanceWorkspace data={data} onChange={setData} onToast={setToast} navigate={navigate} /> :
       (route === "Experiences" || route === "Memory" || route === "Traditions" || route === "Legacy") ?
       <FamilyLifeWorkspace route={route} data={data} onChange={setData} onToast={setToast} navigate={navigate} /> :
+      route === "Insights" ? <IntelligenceWorkspace data={data} onChange={setData} onToast={setToast} navigate={navigate} /> :
       <main className="phase-page">
         <button className="back-link" onClick={() => navigate("Dashboard")}><ArrowLeft size={17}/> Back to dashboard</button>
         <div className="phase-hero"><span className="phase-tag">Planned for Phase {phase}</span><span className="phase-icon"><Compass size={31}/></span><h1>{route}</h1><p>{navigationDescriptions[route] || "A dedicated Family OS workspace is planned for an upcoming development phase."}</p><div className="phase-actions"><button className="primary-button" onClick={() => navigate("Dashboard")}>Return to Family Command Center <ArrowRight size={17}/></button><button className="secondary-button" onClick={() => setSearchOpen(true)}><Search size={17}/> Search preview</button></div></div>
