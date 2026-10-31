@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import type { AppData, Member } from "../data";
 import {
-  activeMembers, canArchiveMember, freshId, HOUSEHOLD_LABELS,
+  activeMembers, buildFamilyTreeLayers, canArchiveMember, freshId, HOUSEHOLD_LABELS,
   profileFor, RELATIONSHIP_LABELS, ROLE_LABELS, setPrimaryHousehold, validateRelationship
 } from "./model";
 import type {
@@ -88,6 +88,7 @@ export default function FamilyWorkspace({ data, onChange, onToast, navigate }: P
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<FamilyRole | "ALL">("ALL");
   const [showArchived, setShowArchived] = useState(false);
+  const [showArchivedHomes, setShowArchivedHomes] = useState(false);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [editingMemberId, setEditingMemberId] = useState<string | "NEW" | null>(null);
   const [memberForm, setMemberForm] = useState<MemberForm>(defaultMemberForm);
@@ -266,7 +267,7 @@ export default function FamilyWorkspace({ data, onChange, onToast, navigate }: P
   const familyTreeChildren = childIds.map(id => memberById(id)).filter((m): m is Member =>
     !!m && profile(m).status === "ACTIVE");
   const treeRoot = membersOnRoot.filter(m => parentLinks.some(r => r.fromId === m.id));
-  const isolated = membersOnRoot.filter(m => !treeRoot.some(r => r.id === m.id));
+  const treeGraph = buildFamilyTreeLayers(visibleMembers, activeRelations);
 
   function showTab(next: Tab) { setTab(next); setQuery(""); }
 
@@ -347,14 +348,16 @@ export default function FamilyWorkspace({ data, onChange, onToast, navigate }: P
         right={<button className="family-btn family-btn-primary" onClick={() => {setRelationshipForm(emptyRelationship);setFormError("");setRelationshipModal(true);}}><Plus size={17}/> Add connection</button>}/>
       <div className="tree-canvas">
         <div className="tree-caption"><span className="tree-dot"/> Connected family people</div>
-        {!!treeRoot.length && <div className="tree-generation"><span className="tree-generation-label">PARENTS & FAMILY ANCHORS</span>
-          <div className="tree-nodes">{treeRoot.map(m => <button className="tree-person" key={m.id} onClick={() => setSelectedMemberId(m.id)}><Avatar member={m} size="large"/><strong>{m.name}</strong><small>{profile(m).relationshipLabel}</small></button>)}</div>
-        </div>}
-        {!!familyTreeChildren.length && <div className="tree-downline"><span/></div>}
-        {!!familyTreeChildren.length && <div className="tree-generation"><span className="tree-generation-label">CHILDREN & DESCENDANTS</span><div className="tree-nodes">
-          {familyTreeChildren.map(m => <button className="tree-person" key={m.id} onClick={() => setSelectedMemberId(m.id)}><Avatar member={m} size="large"/><strong>{m.name}</strong><small>{profile(m).relationshipLabel}</small></button>)}</div></div>}
-        {!!isolated.length && <div className="tree-generation tree-unlinked"><span className="tree-generation-label">OTHER FAMILY MEMBERS</span><div className="tree-nodes">
-          {isolated.map(m => <button className="tree-person" key={m.id} onClick={() => setSelectedMemberId(m.id)}><Avatar member={m} size="large"/><strong>{m.name}</strong><small>{ROLE_LABELS[profile(m).role]}</small></button>)}</div></div>}
+        {treeGraph.layers.map((ids, depth) => <div key={depth}>
+          {depth > 0 && <div className="tree-downline"><span/></div>}
+          <div className="tree-generation"><span className="tree-generation-label">{depth === 0 ? "FAMILY ANCHORS" : "GENERATION " + (depth + 1)}</span>
+            <div className="tree-nodes">{ids.map(id => memberById(id)).filter((m): m is Member => !!m).map(m =>
+              <button className="tree-person" key={m.id} onClick={() => setSelectedMemberId(m.id)}><Avatar member={m} size="large"/><strong>{m.name}</strong><small>{profile(m).relationshipLabel}</small></button>)}</div>
+          </div>
+        </div>)}
+        {!!treeGraph.unlinked.length && <div className="tree-generation tree-unlinked"><span className="tree-generation-label">OTHER FAMILY MEMBERS</span><div className="tree-nodes">
+          {treeGraph.unlinked.map(id => memberById(id)).filter((m): m is Member => !!m).map(m =>
+            <button className="tree-person" key={m.id} onClick={() => setSelectedMemberId(m.id)}><Avatar member={m} size="large"/><strong>{m.name}</strong><small>{ROLE_LABELS[profile(m).role]}</small></button>)}</div></div>}
       </div>
       <div className="family-tree-caption"><Info size={17}/><span>Tree groups use recorded parent-of connections. Partner and other relations appear in Relationships; links are not proof of legal guardianship.</span></div>
       <div className="family-link-list">
@@ -366,12 +369,15 @@ export default function FamilyWorkspace({ data, onChange, onToast, navigate }: P
     {tab === "Households" && <section className="family-panel family-full-panel">
       <PanelHeading title="Households" subtitle="One family can span several homes, residences and shared households."
         right={<button className="family-btn family-btn-primary" onClick={() => openHouseholdEditor()}><Plus size={17}/> New Household</button>}/>
-      <div className="family-household-grid">{existingHouseholds.map(h => <div className="family-household-card" key={h.id}>
-        <div className="family-household-card-head"><span className="household-icon-lg"><Home size={29}/></span><div>{h.isPrimary && <span className="family-primary-chip"><Check size={12}/> Primary</span>}<h3>{h.name}</h3><p>{HOUSEHOLD_LABELS[h.type]}</p></div></div>
+      <div className="family-households-toolbar"><label className="family-checkbox"><input type="checkbox" checked={showArchivedHomes} onChange={e => setShowArchivedHomes(e.target.checked)}/> Show archived households</label></div>
+      <div className="family-household-grid">{family.households.filter(h => showArchivedHomes || h.status === "ACTIVE").map(h => <div className="family-household-card" key={h.id}>
+        <div className="family-household-card-head"><span className="household-icon-lg"><Home size={29}/></span><div>{h.status === "ARCHIVED" && <span className="family-archived-home-chip">Archived</span>}{h.isPrimary && <span className="family-primary-chip"><Check size={12}/> Primary</span>}<h3>{h.name}</h3><p>{HOUSEHOLD_LABELS[h.type]}</p></div></div>
         <p className="family-household-description">{h.description || "A shared space for the people who belong here."}</p>
         <p className="family-household-location"><MapPin size={15}/>{h.location || "Location not set"}</p>
         <div className="family-household-members"><AvatarStack ids={h.memberIds} members={data.members}/><span>{h.memberIds.length} member{h.memberIds.length === 1 ? "" : "s"}</span></div>
-        <div className="family-household-actions"><button className="family-btn family-btn-outline" onClick={() => openHouseholdEditor(h)}><Edit3 size={15}/> Manage</button>{!h.isPrimary && <button className="family-btn family-btn-light" onClick={() => {updateFamily(prev => ({...prev,households:setPrimaryHousehold(prev.households,h.id)}));onToast("Primary household updated");}}>Set primary</button>}</div></div>)}
+        <div className="family-household-actions">{h.status === "ARCHIVED"
+          ? <button className="family-btn family-btn-outline" onClick={() => {updateFamily(prev => ({ ...prev,households:prev.households.map(home => home.id === h.id ? {...home,status:"ACTIVE" as const} : home) }));onToast("Household restored");}}>Restore household</button>
+          : <><button className="family-btn family-btn-outline" onClick={() => openHouseholdEditor(h)}><Edit3 size={15}/> Manage</button>{!h.isPrimary && <button className="family-btn family-btn-light" onClick={() => {updateFamily(prev => ({...prev,households:setPrimaryHousehold(prev.households,h.id)}));onToast("Primary household updated");}}>Set primary</button>}</>}</div></div>)}
         <button className="family-new-household" onClick={() => openHouseholdEditor()}><span><Plus size={25}/></span><strong>Add another household</strong><small>For extended family, shared homes or multiple residences.</small></button></div>
     </section>}
 
