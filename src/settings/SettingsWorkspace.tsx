@@ -1,5 +1,5 @@
 import {useState} from "react";
-import {ArrowRight,CheckCircle2,ChevronRight,Database,Info,LockKeyhole,Moon,RotateCcw,ShieldAlert,ShieldCheck,Sun,X} from "lucide-react";
+import {CheckCircle2,ChevronRight,Database,Info,LockKeyhole,Moon,RotateCcw,ShieldAlert,ShieldCheck,Sun,X} from "lucide-react";
 import type {AppData} from "../data";
 import "./settings.css";
 type Props={data:AppData;dark:boolean;onTheme:(dark:boolean)=>void;onReset:()=>void;navigate:(route:string)=>void};
