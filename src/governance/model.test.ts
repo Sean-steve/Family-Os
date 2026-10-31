@@ -65,7 +65,7 @@ describe("Family OS decision engine",()=>{
     expect(tallyDecision(four).canClose).toBe(true); // 2, 1, 1 plurality
   });
   it("requires every eligible member for unanimous decisions",()=>{
-    let d={...fixture(),rule:"UNANIMOUS" as const,quorum:1};
+    let d:Decision={...fixture(),rule:"UNANIMOUS",quorum:1};
     d=castBallot(d,"alex",d.options[0].id,"a");
     expect(tallyDecision(d).canClose).toBe(false);
     d=castBallot(d,"jamie",d.options[0].id,"b");
@@ -87,7 +87,7 @@ describe("Family OS decision engine",()=>{
     expect(declined.status).toBe("DECLINED");
   });
   it("closes directly if no reviewers; cancels drafts but not resolved outcomes",()=>{
-    let d={...fixture(),requiredApproverIds:[]};
+    let d:Decision={...fixture(),requiredApproverIds:[]};
     d=castBallot(d,"alex",d.options[0].id,"a");
     d=castBallot(d,"jamie",d.options[0].id,"b");
     expect(closeDecisionVoting(d).status).toBe("RESOLVED");
