@@ -124,7 +124,10 @@ CREATE POLICY identity_self_update ON family.identities FOR UPDATE
 -- Other subjects only see families where their own active membership exists.
 CREATE POLICY family_read_member ON family.families FOR SELECT
   TO family_runtime USING (
-    created_by = family.current_actor()
+    (created_by = family.current_actor() AND NOT EXISTS (
+      SELECT 1 FROM family.memberships m
+      WHERE m.family_id = id AND m.user_id = family.current_actor()
+    ))
     OR EXISTS (
       SELECT 1 FROM family.memberships m
       WHERE m.family_id = id AND m.user_id = family.current_actor()
