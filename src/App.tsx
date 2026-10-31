@@ -18,7 +18,7 @@ import FamilyLifeWorkspace from "./life/FamilyLifeWorkspace";
 import IntelligenceWorkspace from "./intelligence/IntelligenceWorkspace";
 import GlobalSearch from "./search/GlobalSearch";
 import {type SearchEntry,routeFromSearch} from "./search/model";
-import { deriveSignals, migrateIntelligence } from "./intelligence/model";
+import { deriveSignals, evidenceCoverage, isDismissed, migrateIntelligence } from "./intelligence/model";
 import { normalizeLife } from "./life/model";
 import { normalizeGovernance, decisionNeedsInput } from "./governance/model";
 import { migrateStrategy, normalizedGoals, recordGoalProgress } from "./strategy/model";
@@ -51,13 +51,10 @@ function readPreview(): AppData {
   return seed;
 }
 function id() { return "local-" + Date.now() + "-" + Math.floor(Math.random() * 9999); }
-function avatarUrl(number: number) { return "https://i.pravatar.cc/120?img=" + number; }
 function Avatar({ member, small = false }: { member: Member; small?: boolean }) {
-  const [failed, setFailed] = useState(false);
   return <span className={"avatar " + (small ? "avatar-small" : "")}
     style={{ backgroundColor: member.color }} title={member.name} aria-label={member.name}>
-    {!failed && <img loading="lazy" src={avatarUrl(member.avatar)} alt="" onError={() => setFailed(true)} />}
-    <span className="avatar-fallback">{member.name.slice(0, 1)}</span>
+    <span className="avatar-fallback">{member.name.slice(0, 1).toUpperCase()}</span>
   </span>;
 }
 function MemberStack({ ids, members }: { ids: string[]; members: Member[] }) {
@@ -183,17 +180,21 @@ export default function App() {
   }));
   const showDetails = (title: string, body: string, kind: string) => setDetails({ title, body, kind });
   const familyMembers = activeMembers(data.members, data.family);
-  const dashboardEvents = eventsOnDate(data.events, dateKey());
+  const dashboardEvents = eventsOnDate(data.events.filter(e=>Boolean(e.date)&&
+    (e.category==="FAMILY"||e.category==="HOME")), dateKey());
   const upcomingLocalEvents = eventsBetween(data.events, shiftDate(dateKey(),1), shiftDate(dateKey(),7))
-    .filter(event => Boolean(event.date)).slice(0,3);
-  const dashboardTasks = tasksOnDate(data.tasks, dateKey());
+    .filter(event => Boolean(event.date)&&(event.category==="FAMILY"||event.category==="HOME")).slice(0,5);
+  const dashboardTasks = tasksOnDate(data.tasks.filter(t=>Boolean(t.dueDate)&&
+    (t.category==="FAMILY"||t.category==="HOME")), dateKey());
   const done = dashboardTasks.filter(t => taskDoneOn(t,dateKey())).length;
   const percent = dashboardTasks.length ? Math.round(done / dashboardTasks.length * 100) : 0;
-  const intelligenceSignals = deriveSignals(data,dateKey());
+  const intelligenceSignals = deriveSignals(data,dateKey()).filter(signal=>!isDismissed(signal,data.intelligence));
+  const coverage = evidenceCoverage(data);
   const evidenceAttention = intelligenceSignals.filter(signal=>signal.tone==="ATTENTION");
   const phase = navItems.find(item => item.label === route)?.phase || (route === "Personal Mode" ? 8 : 8);
 
   return <div className="app-shell">
+    <a href="#family-main" className="skip-content">Skip to main content</a>
     {menuOpen && <button className="mobile-overlay" aria-label="Close menu" onClick={() => setMenuOpen(false)} />}
     <aside className={"sidebar " + (menuOpen ? "sidebar-open" : "")}>
       <div className="brand"><span className="brand-logo"><span /><span /><span /></span><span>Family OS</span><button className="mobile-sidebar-close" aria-label="Close sidebar" onClick={() => setMenuOpen(false)}><X size={20} /></button></div>
@@ -218,13 +219,13 @@ export default function App() {
         <button className="nav-item" onClick={() => navigate("Settings")}><Settings2 size={19} /><span>Settings</span></button>
       </div>
       <div className="sidebar-profile">
-        <Avatar member={data.members[0] || seed.members[0]} />
-        <span><strong>{data.members[0]?.name || "Alex"} Taylor</strong><small>Family Owner</small></span>
+        {data.members[0]&&<Avatar member={data.members[0]}/>}
+        <span><strong>{data.members[0]?.name||data.family.name}</strong><small>Local prototype · Not signed in</small></span>
         <ChevronDown size={14} />
       </div>
     </aside>
 
-    <div className="main-area">
+    <div className="main-area" id="family-main" tabIndex={-1}>
       <header className="topbar">
         <button className="hamburger" aria-label="Open navigation" onClick={() => setMenuOpen(true)}><Menu size={22} /></button>
         <button className="top-search" onClick={() => setSearchOpen(true)}><Search size={20} /><span>Search family, events, goals, memories...</span><kbd>⌘ K</kbd></button>
@@ -233,7 +234,7 @@ export default function App() {
             <button className="family-switch" onClick={() => setFamilyOpen(!familyOpen)} aria-expanded={familyOpen}>
               <MemberStack ids={["alex","jamie"]} members={data.members} /><strong>{data.family.name}</strong><ChevronDown size={16} />
             </button>
-            {familyOpen && <div className="popover family-popover"><b>Family workspace</b><p>{data.family.name} · Local preview</p><button onClick={() => {setFamilyOpen(false);showDetails("Family switching","Multi-family switching will arrive with Family Profiles in Phase 2. This preview contains one local family workspace.","Phase 2");}}>Manage family workspaces <ArrowRight size={14}/></button></div>}
+            {familyOpen && <div className="popover family-popover"><b>Family workspace</b><p>{data.family.name} · Local preview</p><button onClick={() => {setFamilyOpen(false);showDetails("Family switching","This prototype contains one browser-local family. Multi-family switching requires authenticated isolation, consent and a backend and is not implemented.","Not available");}}>Manage family workspaces <ArrowRight size={14}/></button></div>}
           </div>
           <button className="top-icon" aria-label="Notifications" onClick={() => setNotificationsOpen(s => !s)}><Bell size={20} />{!data.notificationsSeen && <span className="top-count">3</span>}</button>
           <button className="top-icon" aria-label={dark ? "Switch to light theme" : "Switch to dark theme"} onClick={() => setDark(s => !s)}>{dark ? <Moon size={20} /> : <Sun size={21} />}</button>
@@ -253,7 +254,7 @@ export default function App() {
           <section className="hero" aria-label="Family greeting">
             <div className="hero-shade" />
             <div className="hero-top">
-              <div><p className="hero-date">{todayText}</p><h1>{formatGreeting()}, {data.members[0]?.name || "Alex"}</h1><p className="hero-subtitle">A calm and connected family builds an extraordinary life.</p></div>
+              <div><p className="hero-date">{todayText}</p><h1>{formatGreeting()}, {data.members[0]?.name || "family"}</h1><p className="hero-subtitle">A calm and connected family builds an extraordinary life.</p></div>
               <div className="hero-weather"><Sun size={30} /><span>Family preview<br /><strong>Our shared space</strong></span></div>
             </div>
             <div className="hero-bottom">
