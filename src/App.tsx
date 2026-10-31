@@ -249,7 +249,7 @@ export default function App() {
           <span><b>{signal.title}</b><small>{signal.domain} · Review linked source evidence</small></span></button>)}
         {!intelligenceSignals.length&&<p className="popover-muted">No supported observations right now. This does not mean the family has no needs.</p>}
         <button className="popover-button" onClick={()=>navigate("Insights")}>Open Insights <ArrowRight size={15}/></button>
-      </div>
+      </div}
 
       {route === "Dashboard" ? <>
         <main className="dashboard">
