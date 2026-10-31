@@ -5,6 +5,7 @@ import {z} from "zod";
 import type {Pool} from "pg";
 import {createOidcVerifier,InvalidAuthentication,type OidcConfig,type Principal} from "./auth.js";
 import {withActor} from "./database.js";
+import {registerRegistryRoutes} from "./registry.js";
 
 export type ApiOptions={pool:Pool;oidc:OidcConfig;allowedOrigins?:string[];logger?:boolean};
 declare module "fastify" {interface FastifyRequest{familyPrincipal?:Principal;}}
@@ -20,7 +21,7 @@ export async function createApi(options:ApiOptions):Promise<FastifyInstance>{
   }:false,bodyLimit:32768,trustProxy:false});
   const verify=createOidcVerifier(options.oidc);
   await app.register(cors,{origin:options.allowedOrigins?.length?options.allowedOrigins:false,
-    credentials:false,methods:["GET","POST","OPTIONS"],allowedHeaders:["Authorization","Content-Type"]});
+    credentials:false,methods:["GET","POST","PATCH","DELETE","OPTIONS"],allowedHeaders:["Authorization","Content-Type"]});
   await app.register(rateLimit,{max:90,timeWindow:"1 minute"});
   app.addHook("onSend",async(_request,reply,payload)=>{
     reply.header("Cache-Control","no-store");
@@ -88,6 +89,7 @@ export async function createApi(options:ApiOptions):Promise<FastifyInstance>{
         return {data:{items:result.rows.slice(0,50).map(presentFamily),count:Math.min(result.rows.length,50),hasMore:result.rows.length>50}};
       });
     });
+    await registerRegistryRoutes(scoped,options.pool);
     scoped.get<{Params:{familyId:string}}>("/api/v1/families/:familyId",async(request,reply)=>{
       const parsed=FamilyId.safeParse(request.params);
       if(!parsed.success)return reply.code(400).send(jsonError("VALIDATION_ERROR","Invalid family ID."));
