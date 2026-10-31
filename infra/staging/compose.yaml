@@ -1,0 +1,107 @@
+name: family-os-staging
+services:
+  family-identity:
+    image: quay.io/keycloak/keycloak:26.8.1
+    restart: unless-stopped
+    command: ["start","--import-realm"]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: ${FAMILY_IDENTITY_JDBC_URL:?Managed Keycloak PostgreSQL JDBC URL required}
+      KC_DB_USERNAME: ${FAMILY_IDENTITY_DB_USER:?Keycloak database user required}
+      KC_DB_PASSWORD: ${FAMILY_IDENTITY_DB_PASSWORD:?Keycloak database password required}
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME: https://${FAMILY_IDENTITY_DOMAIN:?Identity hostname required}
+      KC_PROXY_HEADERS: xforwarded
+      KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "false"
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${FAMILY_IDENTITY_ADMIN_USER:?Bootstrap administrator required}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${FAMILY_IDENTITY_ADMIN_PASSWORD:?Bootstrap administrator secret required}
+    volumes:
+      - ./realm/family-os-staging-realm.json:/opt/keycloak/data/import/family-os-staging-realm.json:ro
+    expose: ["8080"]
+    networks: [private]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    pids_limit: 300
+    mem_limit: 1500m
+    logging: {driver: json-file, options: {max-size: "10m", max-file: "3"}}
+
+  family-api:
+    build:
+      context: ../..
+      dockerfile: infra/staging/api.Dockerfile
+    image: family-os-api:b1-1
+    restart: unless-stopped
+    depends_on:
+      family-identity: {condition: service_started}
+    environment:
+      NODE_ENV: production
+      API_HOST: 0.0.0.0
+      API_PORT: "3001"
+      DATABASE_URL: ${FAMILY_DATABASE_URL:?TLS runtime family Postgres URL required}
+      OIDC_ISSUER: https://${FAMILY_IDENTITY_DOMAIN:?Identity hostname required}/realms/family-os-staging
+      OIDC_AUDIENCE: family-os-api
+      OIDC_JWKS_URI: https://${FAMILY_IDENTITY_DOMAIN:?Identity hostname required}/realms/family-os-staging/protocol/openid-connect/certs
+      APP_ALLOWED_ORIGINS: ${FAMILY_WEB_ORIGIN:?Approved SPA origin required}
+    expose: ["3001"]
+    networks: [private]
+    read_only: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=32m"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    pids_limit: 120
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD","node","-e","fetch('http://127.0.0.1:3001/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 20s
+      timeout: 5s
+      retries: 12
+      start_period: 80s
+    logging: {driver: json-file, options: {max-size: "10m", max-file: "3"}}
+
+  # Run ONLY as an explicitly approved migration command; never as web API.
+  family-migrate:
+    profiles: ["migration"]
+    image: family-os-api:b1-1
+    command: ["node","dist-server/src/migrate.js"]
+    restart: "no"
+    environment:
+      NODE_ENV: production
+      DATABASE_ADMIN_URL: ${FAMILY_DATABASE_ADMIN_URL:?Migration administrator URL required}
+      DATABASE_URL: ${FAMILY_DATABASE_URL:?Restricted runtime URL required}
+    networks: [private]
+    read_only: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=16m"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    logging: {driver: json-file, options: {max-size: "10m", max-file: "2"}}
+
+  https:
+    image: caddy:2.11.7-alpine
+    restart: unless-stopped
+    depends_on:
+      family-api: {condition: service_started}
+      family-identity: {condition: service_started}
+    ports: ["80:80","443:443"]
+    environment:
+      ACME_EMAIL: ${FAMILY_ACME_EMAIL:?ACME operator email required}
+      FAMILY_API_DOMAIN: ${FAMILY_API_DOMAIN:?API hostname required}
+      FAMILY_IDENTITY_DOMAIN: ${FAMILY_IDENTITY_DOMAIN:?Identity hostname required}
+      FAMILY_ADMIN_ALLOW_CIDR: ${FAMILY_ADMIN_ALLOW_CIDR:?Explicit administrative CIDR required}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - family_caddy_data:/data
+      - family_caddy_config:/config
+    networks: [private,public]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    cap_add: ["NET_BIND_SERVICE"]
+    pids_limit: 100
+    mem_limit: 256m
+    logging: {driver: json-file, options: {max-size: "10m", max-file: "3"}}
+networks:
+  private: {}
+  public: {}
+volumes:
+  family_caddy_data: {}
+  family_caddy_config: {}

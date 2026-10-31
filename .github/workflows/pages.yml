@@ -27,9 +27,8 @@ jobs:
           VITE_FAMILY_OIDC_CLIENT_ID: ${{ vars.VITE_FAMILY_OIDC_CLIENT_ID }}
           VITE_FAMILY_OIDC_SCOPE: ${{ vars.VITE_FAMILY_OIDC_SCOPE }}
         run: npm run build
+      # Pages must be enabled once by the repository owner in Settings.
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true
       - uses: actions/upload-pages-artifact@v4
         with:
           path: ./dist

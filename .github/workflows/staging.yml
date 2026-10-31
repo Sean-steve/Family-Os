@@ -1,0 +1,59 @@
+name: Family OS — protected staging activation
+on:
+  workflow_dispatch:
+    inputs:
+      backup_snapshot_confirmed:
+        description: "I have verified a recent snapshot of both managed PostgreSQL databases and approve migrations."
+        required: true
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: family-os-staging-deploy
+  cancel-in-progress: false
+jobs:
+  activate:
+    if: github.ref == 'refs/heads/main' && inputs.backup_snapshot_confirmed == true
+    runs-on: ubuntu-latest
+    environment:
+      name: family-os-staging
+    env:
+      FAMILY_STAGING_HOST: ${{ vars.FAMILY_STAGING_HOST }}
+      FAMILY_STAGING_USER: ${{ vars.FAMILY_STAGING_USER }}
+      FAMILY_STAGING_KNOWN_HOSTS: ${{ secrets.FAMILY_STAGING_KNOWN_HOSTS }}
+      FAMILY_STAGING_SSH_KEY: ${{ secrets.FAMILY_STAGING_SSH_KEY }}
+    steps:
+      - name: Require operator-provided staging secrets and pinned host identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$FAMILY_STAGING_HOST" =~ ^[a-zA-Z0-9.-]+$ ]] || exit 1
+          [[ "$FAMILY_STAGING_USER" =~ ^[a-z_][a-z0-9_-]*$ ]] || exit 1
+          test -n "$FAMILY_STAGING_KNOWN_HOSTS"
+          test -n "$FAMILY_STAGING_SSH_KEY"
+          [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]] || exit 1
+      - name: Deploy reviewed main commit using pinned SSH host key
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$FAMILY_STAGING_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+          eval "$(ssh-agent -s)"
+          printf '%s\n' "$FAMILY_STAGING_SSH_KEY" | ssh-add - >/dev/null
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 \
+            "$FAMILY_STAGING_USER@$FAMILY_STAGING_HOST" "bash -s -- $GITHUB_SHA" <<'REMOTE'
+          set -euo pipefail
+          SHA="$1"
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || exit 1
+          ROOT="/srv/family-os/source"
+          if [[ ! -d "$ROOT/.git" ]]; then
+            install -d -m 700 "/srv/family-os"
+            git clone https://github.com/Sean-steve/Family-Os.git "$ROOT"
+          fi
+          git -C "$ROOT" fetch --prune origin main
+          git -C "$ROOT" merge-base --is-ancestor "$SHA" origin/main
+          git -C "$ROOT" checkout --detach --force "$SHA"
+          FAMILY_STAGING_MIGRATION_APPROVED=YES bash "$ROOT/infra/staging/deploy.sh"
+          REMOTE

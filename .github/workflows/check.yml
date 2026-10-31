@@ -64,3 +64,79 @@ jobs:
         run: npm run db:migrate
       - name: Real PostgreSQL/OIDC/tenant integration certification
         run: npm run test:api
+
+  staging-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify staging configuration template
+        run: node infra/staging/preflight.mjs infra/staging/.env.example --template
+      - name: Validate Docker Compose topology without real credentials
+        run: docker compose --env-file infra/staging/.env.example -f infra/staging/compose.yaml config --quiet
+      - name: Validate Caddy TLS proxy config
+        run: |
+          docker run --rm \
+            -e ACME_EMAIL=operator@example.invalid \
+            -e FAMILY_API_DOMAIN=api.family.example.invalid \
+            -e FAMILY_IDENTITY_DOMAIN=identity.family.example.invalid \
+            -e FAMILY_ADMIN_ALLOW_CIDR=127.0.0.1/32 \
+            -v "$PWD/infra/staging/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            caddy:2.11.7-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+      - name: Validate staging scripts before deployment
+        run: |
+          node --check infra/staging/preflight.mjs
+          node --check infra/staging/verify-live.mjs
+          node --check infra/staging/certify-users.mjs
+          bash -n infra/staging/deploy.sh
+      - name: Build isolated production API Docker image
+        run: docker build -f infra/staging/api.Dockerfile -t family-os-api:b1-1 .
+      - name: Check production image boots Node and includes migration scripts
+        run: |
+          docker run --rm family-os-api:b1-1 node --version
+          docker run --rm family-os-api:b1-1 node -e "const fs=require('fs');if(!fs.existsSync('/app/dist-server/src/index.js')||!fs.existsSync('/app/dist-server/migrations/0002_b1_registry.sql'))process.exit(1);"
+
+  oidc-protocol:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Boot isolated Keycloak staging realm in CI
+        run: |
+          docker run -d --name family-os-ci-keycloak \
+            -p 127.0.0.1:18888:8080 \
+            -e KC_BOOTSTRAP_ADMIN_USERNAME=ci_admin \
+            -e KC_BOOTSTRAP_ADMIN_PASSWORD=ci_ephemeral_not_a_real_secret \
+            -v "$PWD/infra/staging/realm/family-os-staging-realm.json:/opt/keycloak/data/import/family-os-staging-realm.json:ro" \
+            quay.io/keycloak/keycloak:26.8.1 start-dev --import-realm
+      - name: Verify imported realm publishes real discovery and signing keys
+        run: |
+          set -euo pipefail
+          ready=0
+          for attempt in $(seq 1 60); do
+            if curl -fsS --max-time 4 \
+              "http://127.0.0.1:18888/realms/family-os-staging/.well-known/openid-configuration" \
+              -o /tmp/family-oidc-discovery.json 2>/dev/null; then ready=1; break; fi
+            sleep 3
+          done
+          if [[ "$ready" != "1" ]]; then
+            echo "Staging Keycloak realm failed to activate" >&2
+            docker logs --tail 60 family-os-ci-keycloak >&2
+            exit 1
+          fi
+          curl -fsS --max-time 8 \
+            "http://127.0.0.1:18888/realms/family-os-staging/protocol/openid-connect/certs" \
+            -o /tmp/family-oidc-jwks.json
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+          const metadata=JSON.parse(fs.readFileSync("/tmp/family-oidc-discovery.json","utf8"));
+          const jwks=JSON.parse(fs.readFileSync("/tmp/family-oidc-jwks.json","utf8"));
+          if(!metadata.issuer.endsWith("/realms/family-os-staging")||
+             !metadata.response_types_supported?.includes("code")||
+             !metadata.code_challenge_methods_supported?.includes("S256")||
+             !metadata.jwks_uri.endsWith("/realms/family-os-staging/protocol/openid-connect/certs")||
+             !jwks.keys?.some(k=>k.kty==="RSA"))process.exit(1);
+          process.stdout.write("Real ephemeral Keycloak staging realm: discovery, PKCE S256 and RSA JWKS verified.\n");
+          NODE
+      - name: Remove ephemeral CI provider
+        if: always()
+        run: docker rm -f family-os-ci-keycloak || true
