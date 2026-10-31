@@ -38,6 +38,8 @@ describe("Phase 6 family life persistence",()=>{
     expect(e.linkedEventId).toBe("");
     expect(added.title).toBe(e.title);
     expect(()=>experienceAsCalendarEvent({...e,date:""})).toThrow(/valid date/i);
+    expect(experienceAsCalendarEvent({...e,time:"23:30"}).endTime).toBe("23:59");
+    expect(()=>experienceAsCalendarEvent({...e,time:"23:59"})).toThrow(/earlier than 23:59/i);
   });
 });
 describe("Family memory & responsible preview notes",()=>{
