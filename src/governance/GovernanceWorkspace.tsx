@@ -25,7 +25,7 @@ const policyCategories=Object.keys(policyCategoryLabels) as PolicyCategory[];
 const decisionCategories=Object.keys(decisionCategoryLabels) as DecisionCategory[];
 const rules=Object.keys(decisionRuleLabels) as DecisionRule[];
 const isoNow=()=>new Date().toISOString();
-const isoDate=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"Africa/Nairobi",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+const isoDate=()=>{const parts=new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Nairobi",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());const p=(key:string)=>parts.find(x=>x.type===key)?.value||"";return p("year")+"-"+p("month")+"-"+p("day");};
 const shortDate=(date:string)=>date?date.slice(0,10):"Not set";
 function StatusBadge({status}:{status:DecisionStatus}){return <span className={"gv-status status-"+status.toLowerCase()}>{status.replace(/_/g," ")}</span>}
 function People({ids,members}:{ids:string[];members:Member[]}){return <span className="gv-avatars">{ids.map(id=>{
@@ -140,6 +140,9 @@ export default function GovernanceWorkspace({data,onChange,onToast,navigate}:Pro
   function savePolicy(e:FormEvent){
     e.preventDefault();if(!policyDraft)return;
     if(!policyDraft.title.trim()||!policyDraft.description.trim()){setError("A policy needs a title and description.");return;}
+    if(policyDraft.scope==="HOUSEHOLD"&&!houses.some(h=>h.id===policyDraft.householdId)){
+      setError("Select an active household for this scoped guideline.");return;
+    }
     const current=state.policies.find(p=>p.id===policyDraft.id);
     const next={...policyDraft,title:policyDraft.title.trim(),description:policyDraft.description.trim(),
       updatedAt:isoNow(),version:(current?.version||0)+(current?1:1)};
