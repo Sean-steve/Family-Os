@@ -11,6 +11,8 @@ import {
 import { seed, navItems, navigationDescriptions } from "./data";
 import type { AppData, Goal, Member } from "./data";
 import FamilyWorkspace from "./family/FamilyWorkspace";
+import OperationsWorkspace from "./operations/OperationsWorkspace";
+import { clockDisplay, dateKey, dateLabel, eventDate, eventsBetween, eventsOnDate, normalizeOperations, tasksOnDate, taskDoneOn, toggleTaskForDate, shiftDate } from "./operations/model";
 import { activeMembers, migrateFamilyData, profileFor } from "./family/model";
 
 const STORE_KEY = "family-os-preview-v1";
@@ -34,7 +36,7 @@ function readPreview(): AppData {
         Array.isArray(parsed.members) && Array.isArray(parsed.tasks) &&
         "goals" in parsed && Array.isArray(parsed.goals) &&
         "events" in parsed && Array.isArray(parsed.events) &&
-        "upcoming" in parsed && Array.isArray(parsed.upcoming)) return { ...(parsed as AppData), family: migrateFamilyData((parsed as Partial<AppData>).family) };
+        "upcoming" in parsed && Array.isArray(parsed.upcoming)) return { ...(parsed as AppData), family: migrateFamilyData((parsed as Partial<AppData>).family), operations: normalizeOperations((parsed as Partial<AppData>).operations) };
   } catch { /* local storage can be disabled; use preview state */ }
   return seed;
 }
@@ -95,6 +97,7 @@ export default function App() {
   const [draftExtra, setDraftExtra] = useState("");
   const [details, setDetails] = useState<{ title: string; body: string; kind: string } | null>(null);
   const [toast, setToast] = useState("");
+  const [operationsAction, setOperationsAction] = useState<"Task" | "Event" | null>(null);
   const [sampleVisible, setSampleVisible] = useState(true);
   const searchInput = useRef<HTMLInputElement>(null);
 
@@ -130,6 +133,12 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
   const openAdd = (kind: "Task" | "Goal" | "Event" | "Member") => {
+    if (kind === "Task" || kind === "Event") {
+      setAddKind(null);
+      setOperationsAction(kind);
+      navigate(kind === "Task" ? "Responsibilities" : "Calendar");
+      return;
+    }
     setDraftTitle(""); setDraftExtra(""); setAddKind(kind);
   };
   const submitAdd = (e: FormEvent<HTMLFormElement>) => {
@@ -150,7 +159,7 @@ export default function App() {
     setAddKind(null);
   };
   const toggleTask = (taskId: string) => setData(prev => ({
-    ...prev, tasks: prev.tasks.map(t => t.id === taskId ? { ...t, done: !t.done } : t)
+    ...prev, tasks: prev.tasks.map(t => t.id === taskId ? toggleTaskForDate(t, dateKey()) : t)
   }));
   const toggleEvent = (eventId: string) => setData(prev => ({
     ...prev, events: prev.events.map(e => e.id === eventId ? { ...e, done: !e.done } : e)
@@ -160,11 +169,16 @@ export default function App() {
     ...navItems.map(n => ({ title: n.label, sub: "Navigate · Phase " + n.phase, page: n.label })),
     ...data.goals.map(g => ({ title: g.title, sub: "Family goal · " + g.progress + "% complete", page: "Goals" })),
     ...data.tasks.map(t => ({ title: t.title, sub: "Responsibility · " + t.person, page: "Responsibilities" })),
-    ...data.events.map(e => ({ title: e.title, sub: "Today · " + e.time, page: "Calendar" }))
+    ...data.events.filter(e => e.status !== "CANCELLED").map(e => ({ title: e.title, sub: "Family calendar · " + (e.date || "Today"), page: "Calendar" })),
+    ...data.operations.routines.map(r => ({ title: r.name, sub: "Family routine", page: "Routines" }))
   ].filter(item => (item.title + " " + item.sub).toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 9);
   const familyMembers = activeMembers(data.members, data.family);
-  const done = data.tasks.filter(t => t.done).length;
-  const percent = data.tasks.length ? Math.round(done / data.tasks.length * 100) : 0;
+  const dashboardEvents = eventsOnDate(data.events, dateKey());
+  const upcomingLocalEvents = eventsBetween(data.events, shiftDate(dateKey(),1), shiftDate(dateKey(),7))
+    .filter(event => Boolean(event.date)).slice(0,3);
+  const dashboardTasks = tasksOnDate(data.tasks, dateKey());
+  const done = dashboardTasks.filter(t => taskDoneOn(t,dateKey())).length;
+  const percent = dashboardTasks.length ? Math.round(done / dashboardTasks.length * 100) : 0;
   const phase = navItems.find(item => item.label === route)?.phase || (route === "Personal Mode" ? 8 : 8);
 
   return <div className="app-shell">
@@ -239,9 +253,9 @@ export default function App() {
           {sampleVisible && <div className="preview-banner"><Info size={15}/><span>Interactive frontend preview · Fictional family data saved only in this browser. No backend or live health/finance integrations.</span><button onClick={() => setSampleVisible(false)} aria-label="Dismiss preview note"><X size={15}/></button></div>}
 
           <section className="metrics" aria-label="Family overview">
-            <MetricCard title="Today" value={data.events.length} foot="items" icon={CalendarDays} tone="blue" onClick={() => showDetails("Today's schedule",data.events.length + " preview calendar items scheduled. Add an event from Quick Actions or the Today panel.","Schedule")}/>
+            <MetricCard title="Today" value={dashboardEvents.length} foot="events" icon={CalendarDays} tone="blue" onClick={() => navigate("Calendar")}/>
             <MetricCard title="Family Goals" value={data.goals.length} foot="On track" icon={Target} tone="rose" onClick={() => openAdd("Goal")}/>
-            <MetricCard title="Responsibilities" value={data.tasks.length} foot={percent + "% completed"} icon={CheckCircle2} tone="green" onClick={() => openAdd("Task")}/>
+            <MetricCard title="Responsibilities" value={dashboardTasks.length} foot={percent + "% completed"} icon={CheckCircle2} tone="green" onClick={() => openAdd("Task")}/>
             <MetricCard title="Decisions" value="2" foot="awaiting input" icon={UsersRound} tone="purple" onClick={() => navigate("Decisions")}/>
             <MetricCard title="Family Health" value="Good" foot="sample status" icon={Heart} tone="green" onClick={() => showDetails("Family Health","This is an illustrative dashboard indicator only; no health information is connected. Health context will require consent and an authorised integration.","Preview indicator")}/>
             <MetricCard title="Risks & Alerts" value="1" foot="needs attention" icon={TriangleAlert} tone="orange" onClick={() => showDetails("Alerts","The alert cards are fictional design examples. Future risk intelligence will provide evidence, confidence, freshness and privacy controls.","Preview indicator")}/>
@@ -262,7 +276,7 @@ export default function App() {
             <article className="panel today-panel">
               <CardTitle action="View Calendar" onAction={() => navigate("Calendar")}>Today <span className="title-hint">{shortDate}</span></CardTitle>
               <div className="day-timeline">
-                {data.events.map(event => <div className="timeline-row" key={event.id}>
+                {dashboardEvents.map(event => <div className="timeline-row" key={event.id}>
                   <span className="time-dot" /><time>{event.time}</time><span className="event-color" style={{backgroundColor:event.color}} />
                   <button className="event-text" onClick={() => showDetails(event.title,event.note + " · " + event.time,"Calendar event")}><strong>{event.title}</strong><small>{event.note}</small></button>
                   <MemberStack ids={event.attendees} members={data.members}/>
@@ -275,6 +289,10 @@ export default function App() {
             <article className="panel upcoming-panel">
               <CardTitle action="View All" onAction={() => navigate("Calendar")}>Upcoming <span className="title-hint">Next 7 days</span></CardTitle>
               <div className="upcoming-list">
+                {upcomingLocalEvents.map(event => <button key={event.id} className="upcoming-row" onClick={() => navigate("Calendar")}>
+                  <time>{dateLabel(eventDate(event))}</time><IconBox icon={CalendarDays} tint="blue"/><span>
+                    <strong>{event.title}</strong><small>{clockDisplay(event.time)} · Added to family calendar</small>
+                  </span></button>)}
                 {data.upcoming.map(item => {
                   const Icon = item.icon === "heart" ? Heart : item.icon === "school" ? Sparkles : item.icon === "tree" ? TreePine : item.icon === "soccer" ? Target : ShieldCheck;
                   return <button key={item.id} className="upcoming-row" onClick={() => showDetails(item.title,item.detail + " · " + item.when,"Upcoming event")}>
@@ -298,8 +316,8 @@ export default function App() {
 
             <article className="panel responsibilities-panel">
               <CardTitle action="View All" onAction={() => navigate("Responsibilities")}>Responsibilities</CardTitle>
-              <div className="responsibility-list">{data.tasks.slice(0, 5).map(task =>
-                <div key={task.id} className="responsibility-row"><button className={"task-check " + (task.done ? "checked" : "")} onClick={() => toggleTask(task.id)} aria-label={"Mark " + task.title + (task.done ? " incomplete" : " complete")}>{task.done && <Check size={14}/>}</button><span><strong className={task.done ? "completed-task" : ""}>{task.title}</strong><small>{task.person}</small></span><em className={task.due === "Today" ? "due-today" : ""}>{task.due}</em></div>)}</div>
+              <div className="responsibility-list">{dashboardTasks.slice(0, 5).map(task =>
+                <div key={task.id} className="responsibility-row"><button className={"task-check " + (taskDoneOn(task, dateKey()) ? "checked" : "")} onClick={() => toggleTask(task.id)} aria-label={"Mark " + task.title + (taskDoneOn(task,dateKey()) ? " incomplete" : " complete")}>{taskDoneOn(task,dateKey()) && <Check size={14}/>}</button><span><strong className={taskDoneOn(task,dateKey()) ? "completed-task" : ""}>{task.title}</strong><small>{task.person}</small></span><em className={task.due === "Today" ? "due-today" : ""}>{task.due}</em></div>)}</div>
               <button className="panel-footer-button" onClick={() => openAdd("Task")}><Plus size={15}/> New responsibility</button>
             </article>
 
@@ -325,7 +343,11 @@ export default function App() {
           </section>
           <footer className="dashboard-footer"><span>Family OS · Phase 1 frontend preview</span><span>No account or backend connection · Private to this browser</span></footer>
         </main>
-      </> : route === "Family" ? <FamilyWorkspace data={data} onChange={setData} onToast={setToast} navigate={navigate} /> : <main className="phase-page">
+      </> : route === "Family" ? <FamilyWorkspace data={data} onChange={setData} onToast={setToast} navigate={navigate} /> :
+      (route === "Plan" || route === "Calendar" || route === "Responsibilities" || route === "Routines") ?
+      <OperationsWorkspace route={route} data={data} onChange={setData} onToast={setToast} navigate={navigate}
+        initialAction={operationsAction} onInitialActionConsumed={() => setOperationsAction(null)} /> :
+      <main className="phase-page">
         <button className="back-link" onClick={() => navigate("Dashboard")}><ArrowLeft size={17}/> Back to dashboard</button>
         <div className="phase-hero"><span className="phase-tag">Planned for Phase {phase}</span><span className="phase-icon"><Compass size={31}/></span><h1>{route}</h1><p>{navigationDescriptions[route] || "A dedicated Family OS workspace is planned for an upcoming development phase."}</p><div className="phase-actions"><button className="primary-button" onClick={() => navigate("Dashboard")}>Return to Family Command Center <ArrowRight size={17}/></button><button className="secondary-button" onClick={() => setSearchOpen(true)}><Search size={17}/> Search preview</button></div></div>
         <div className="phase-note"><ShieldCheck size={23}/><div><strong>Intentional Phase 1 boundary</strong><p>This screen is not represented as finished. The application shell and dashboard are implemented now; this module will become interactive in its designated phase, using the same visual system.</p></div></div>
@@ -337,7 +359,7 @@ export default function App() {
     {searchOpen && <div className="modal-backdrop" onClick={() => setSearchOpen(false)}><section className="search-dialog" role="dialog" aria-modal="true" aria-label="Search Family OS" onClick={e => e.stopPropagation()}><div className="search-dialog-input"><Search size={22}/><input ref={searchInput} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search family, goals, events, screens..." aria-label="Search"/><button onClick={() => setSearchOpen(false)}><X size={19}/></button></div><div className="search-results">{searchItems.length ? searchItems.map((item, index) => <button key={item.page + item.title + index} onClick={() => navigate(item.page)}><span className="search-result-icon"><ArrowRight size={16}/></span><span><b>{item.title}</b><small>{item.sub}</small></span><ChevronRight size={16}/></button>) : <p>No matching preview items.</p>}</div><div className="search-hint"><Command size={13}/> Press Ctrl/⌘ + K to open search · Esc to close</div></section></div>}
 
     {addKind && <div className="modal-backdrop" onClick={() => setAddKind(null)}><section className="action-dialog" role="dialog" aria-modal="true" aria-label={"Add " + addKind} onClick={e => e.stopPropagation()}><div className="dialog-heading"><div><span className="dialog-eyebrow">FAMILY OS · LOCAL PREVIEW</span><h2>Add {addKind === "Task" ? "responsibility" : addKind.toLowerCase()}</h2></div><button className="close-dialog" onClick={() => setAddKind(null)} aria-label="Close dialog"><X size={19}/></button></div>
-      <div className="kind-tabs">{(["Task","Goal","Event","Member"] as const).map(kind => <button type="button" className={kind === addKind ? "selected" : ""} key={kind} onClick={() => {setAddKind(kind);setDraftTitle("");setDraftExtra("");}}>{kind}</button>)}</div>
+      <div className="kind-tabs">{(["Task","Goal","Event","Member"] as const).map(kind => <button type="button" className={kind === addKind ? "selected" : ""} key={kind} onClick={() => openAdd(kind)}>{kind}</button>)}</div>
       <form onSubmit={submitAdd}><Input label={addKind === "Member" ? "Name" : "Title"} required value={draftTitle} onChange={setDraftTitle} placeholder={addKind === "Member" ? "Family member's first name" : addKind === "Goal" ? "e.g. Plan our next family trip" : addKind === "Event" ? "e.g. Sunday family lunch" : "e.g. Pick up groceries"}/>
         <Input label={addKind === "Member" ? "Role" : addKind === "Task" ? "Assigned to" : addKind === "Event" ? "Time" : "Description"} value={draftExtra} onChange={setDraftExtra} placeholder={addKind === "Member" ? "e.g. Grandparent" : addKind === "Task" ? "e.g. Alex" : addKind === "Event" ? "e.g. 6:30 PM" : "e.g. Shared family priority"}/>
         <p className="dialog-privacy"><ShieldCheck size={15}/> Saved to this browser only. No data is sent to a server.</p><div className="dialog-actions"><button type="button" className="secondary-button" onClick={() => setAddKind(null)}>Cancel</button><button className="primary-button" type="submit"><Plus size={17}/> Add {addKind}</button></div></form>
