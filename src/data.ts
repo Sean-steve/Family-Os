@@ -1,3 +1,4 @@
+import { seedLife, type FamilyLifeState } from "./life/model";
 import { seedGovernance, type GovernanceState } from "./governance/model";
 import { seedFamily, type FamilyData } from "./family/model";
 import { seedStrategy, type StrategyState, type GoalExtension } from "./strategy/model";
@@ -12,12 +13,13 @@ export type PlanEvent = { id: string; time: string; title: string; note: string;
   date?: string; endTime?: string; location?: string; householdId?: string; category?: Category;
   status?: "ACTIVE" | "CANCELLED"; };
 export type Upcoming = { id: string; when: string; title: string; detail: string; icon: string; tint: string };
-export type AppData = { members: Member[]; family: FamilyData; operations: OperationsState; strategy: StrategyState; governance: GovernanceState; tasks: Task[]; goals: Goal[]; events: PlanEvent[]; upcoming: Upcoming[]; notificationsSeen: boolean };
+export type AppData = { members: Member[]; family: FamilyData; operations: OperationsState; strategy: StrategyState; governance: GovernanceState; life: FamilyLifeState; tasks: Task[]; goals: Goal[]; events: PlanEvent[]; upcoming: Upcoming[]; notificationsSeen: boolean };
 export const seed: AppData = {
   family: seedFamily,
   operations: seedOperations,
   strategy: seedStrategy,
   governance: seedGovernance,
+  life: seedLife,
   members: [
     { id: "alex", name: "Alex", role: "Owner", avatar: 12, color: "#cee6ff" },
     { id: "jamie", name: "Jamie", role: "Co-parent", avatar: 47, color: "#ffe0db" },
@@ -62,7 +64,9 @@ export const navItems = [
   { label: "Calendar", icon: "calendar", phase: 3 },
   { label: "Responsibilities", icon: "tasks", phase: 3 },
   { label: "Routines", icon: "routines", phase: 3 },
+  { label: "Experiences", icon: "experiences", phase: 6 },
   { label: "Memory", icon: "memory", phase: 6 },
+  { label: "Traditions", icon: "traditions", phase: 6 },
   { label: "Legacy", icon: "legacy", phase: 6 },
   { label: "Insights", icon: "insights", phase: 7 },
   { label: "Search", icon: "search", phase: 8 }
@@ -76,7 +80,7 @@ export const navigationDescriptions: Record<string, string> = {
   Responsibilities: "Coordinate family tasks, assignments and household workload.",
   Routines: "Build calm and repeatable daily and weekly family rhythms.",
   Memory: "A private timeline of your family's favourite moments and milestones.",
-  Legacy: "Keep stories, traditions, family wisdom and meaningful artifacts safe.",
+  Legacy: "Preserve family stories, wisdom, letters and heirloom metadata in a local-only preview.",
   Insights: "Explainable family signals, opportunities and advisory recommendations.",
   Search: "Find authorised family information across your family workspace.",
   Notifications: "Important family updates and reminders in one place.",
