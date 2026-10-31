@@ -54,6 +54,20 @@ describe("B1 authenticated household and adult-only membership flows",()=>{
     const res=await req(ownerId,"POST","/api/v1/families",{name:"B1 Test Family "+randomUUID()});
     expect(res.statusCode).toBe(201);ownerFamily=res.json().data.id;
   });
+  it("permits only signed OWNER to rename the authoritative family aggregate",async()=>{
+    const path="/api/v1/families/"+ownerFamily;
+    expect((await req(strangerId,"PATCH",path,{name:"Unauthorized rename"})).statusCode).toBe(404);
+    const renamed="Family Registry B1 "+randomUUID();
+    const result=await req(ownerId,"PATCH",path,{name:renamed});
+    expect(result.statusCode).toBe(200);
+    expect(result.json().data.name).toBe(renamed);
+    expect((await req(ownerId,"GET",path)).json().data.name).toBe(renamed);
+    expect((await req(ownerId,"PATCH",path,{name:"x",role:"OWNER"})).statusCode).toBe(400);
+    const audits=await admin.query(
+      "SELECT action FROM family.audit_events WHERE family_id=$1 AND action='FAMILY_RENAMED'",
+      [ownerFamily]);
+    expect(audits.rows).toEqual([{action:"FAMILY_RENAMED"}]);
+  });
   it("creates, reads, updates and archives household labels with audit/outbox",async()=>{
     const url="/api/v1/families/"+ownerFamily+"/households";
     expect((await req(strangerId,"GET",url)).statusCode).toBe(404);
