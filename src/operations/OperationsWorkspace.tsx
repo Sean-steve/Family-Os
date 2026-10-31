@@ -11,7 +11,7 @@ import type { Category, FamilyNote, Priority, Repeat, Routine } from "./model";
 import {
   categoryLabels, clockDisplay, completedRoutine, dateKey, dateLabel, dateParts, dayOfWeek,
   eventDate, eventsBetween, eventsOnDate, findEventConflicts, monthGrid,
-  parseClock, repeatLabels, routinesOnDate, scheduledRoutine, shiftDate, startOfWeek,
+  parseClock, repeatLabels, repeatsOn, routinesOnDate, scheduledRoutine, shiftDate, startOfWeek,
   taskAnchor, taskDoneOn, taskLoadByMember, tasksOnDate, toggleRoutineDay,
   toggleRoutineStep, toggleTaskForDate, weekDays
 } from "./model";
@@ -104,9 +104,11 @@ export default function OperationsWorkspace({route,data,onChange,onToast,navigat
     if(houseFilter!=="ALL"&&t.householdId!==houseFilter)return false;
     return (t.title+" "+t.description+" "+t.person).toLowerCase().includes(search.toLowerCase());
   });
+  const needsAttention=(t:Task)=>t.priority==="HIGH"||(
+    (!t.repeat||t.repeat==="NONE")&&taskAnchor(t)<today);
   const groupedTasks:Record<string,Task[]>={
-    "Needs attention":taskScope.filter(t=>!taskDoneOn(t,selectedDay)&&!t.archived&&((t.priority==="HIGH")||taskAnchor(t)<today)),
-    "To do":taskScope.filter(t=>!taskDoneOn(t,selectedDay)&&!t.archived&&t.priority!=="HIGH"&&taskAnchor(t)>=today),
+    "Needs attention":taskScope.filter(t=>!taskDoneOn(t,selectedDay)&&!t.archived&&needsAttention(t)),
+    "To do":taskScope.filter(t=>!taskDoneOn(t,selectedDay)&&!t.archived&&!needsAttention(t)),
     "Completed":taskScope.filter(t=>taskDoneOn(t,selectedDay)&&!t.archived),
     "Archived":taskScope.filter(t=>!!t.archived)
   };
@@ -411,8 +413,13 @@ export default function OperationsWorkspace({route,data,onChange,onToast,navigat
             {t.repeat&&t.repeat!=="NONE"&&<><Repeat2 size={14}/><span>{repeatLabels[t.repeat]}</span></>}</div>
           <div className="ops-task-card-footer"><div><MemberDots ids={t.assigneeIds||[]} members={members}/><span>{memberLabels(data.members,t.assigneeIds||[])}</span></div>
             <div><button aria-label={"Edit "+t.title} onClick={()=>openTask(t)}><Edit3 size={16}/></button><button aria-label={t.archived?"Restore "+t.title:"Archive "+t.title} onClick={()=>archiveTask(t)}><Trash2 size={16}/></button></div></div>
-          {!t.archived&&<button className={"ops-task-complete "+(taskDoneOn(t,selectedDay)?"finished":"")} onClick={()=>markTask(t)}>
-            {taskDoneOn(t,selectedDay)?<><CheckCheck size={16}/> Completed · Undo</>:<><Circle size={16}/> Mark complete for {dateLabel(selectedDay)}</>}</button>}
+          {!t.archived&&<button className={"ops-task-complete "+(taskDoneOn(t,selectedDay)?"finished":"")}
+            disabled={Boolean(t.repeat&&t.repeat!=="NONE"&&!repeatsOn(t.repeat,taskAnchor(t),selectedDay))}
+            onClick={()=>markTask(t,t.repeat&&t.repeat!=="NONE"?selectedDay:taskAnchor(t))}>
+            {t.repeat&&t.repeat!=="NONE"&&!repeatsOn(t.repeat,taskAnchor(t),selectedDay)
+              ?"Not scheduled for "+dateLabel(selectedDay)
+              :taskDoneOn(t,selectedDay)?<><CheckCheck size={16}/> Completed · Undo</>
+              :<><Circle size={16}/> {t.repeat&&t.repeat!=="NONE"?"Mark complete for "+dateLabel(selectedDay):"Mark complete"}</>}</button>}
         </div>)}
         {!tasks.length&&<p className="ops-column-empty">Nothing here. Nice and clear.</p>}
       </section>)}</div>
