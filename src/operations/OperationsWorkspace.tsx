@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, type FormEvent } from "react";
 import {
-  ArrowRight, CalendarDays, Check, CheckCheck, ChevronDown,
+  ArrowRight, CalendarDays, Check, CheckCheck,
   ChevronLeft, ChevronRight, Circle, Clock3, Edit3, HeartHandshake, Info,
   ListChecks, MapPin, Megaphone, Pause, Pin, Plus, Repeat2, Search,
   ShieldCheck, Sparkles, Trash2, TriangleAlert, UsersRound, X
