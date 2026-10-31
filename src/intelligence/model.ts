@@ -55,7 +55,7 @@ const order:Record<SignalTone,number>={ATTENTION:0,OPPORTUNITY:1,CELEBRATE:2};
 export function deriveSignals(data:AppData,day=dateKey()):Signal[]{
   const signals:Signal[]=[];
   const upcomingSeven=shiftDate(day,7),upcomingFourteen=shiftDate(day,14);
-  const eligibleTask=(category:string|undefined)=>!category||category==="HOME"||category==="FAMILY"||category==="OTHER";
+  const eligibleTask=(category:string|undefined)=>category==="HOME"||category==="FAMILY"||category==="OTHER";
   const publicEvent=(category:string|undefined)=>category==="HOME"||category==="FAMILY";
   const explicitTasks=data.tasks.filter(t=>!t.archived&&eligibleTask(t.category)&&t.dueDate&&
     (!t.repeat||t.repeat==="NONE"));
@@ -66,9 +66,9 @@ export function deriveSignals(data:AppData,day=dateKey()):Signal[]{
       title:overdue.length+" overdue family responsibilit"+(overdue.length===1?"y":"ies"),
       summary:"Recorded one-time household/family tasks have due dates before today and are still open.",
       why:"These tasks have explicit dates and remain incomplete in the Responsibilities list.",
-      limitation:"Legacy Today/Tomorrow samples, repeating tasks, and health/school/work categories are excluded. No urgency beyond the recorded due dates is inferred.",
+      limitation:"Unclassified legacy samples, repeating tasks, and health/school/work categories are excluded. No urgency beyond the recorded due dates is inferred.",
       rule:"Explicit due date < as-of date, not completed, non-recurring, shared category.",
-      sourceDate:e.map(x=>x.date).sort().at(-1)||"",asOf:day,evidence:e,
+      sourceDate:e.map(x=>x.date).sort().pop()||"",asOf:day,evidence:e,
       nextStep:"Review overdue responsibilities",destination:"Responsibilities"}));
   }
   const unassigned=data.tasks.filter(t=>!t.archived&&eligibleTask(t.category)&&
