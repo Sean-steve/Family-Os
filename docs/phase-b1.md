@@ -13,6 +13,7 @@ Migration: server/migrations/0002_b1_registry.sql.
 The database now contains family members as verified identity/membership references, and household labels and types with soft archival. Household names are non-sensitive labels only: no physical addresses, locations of minors, relationship records, health conditions, or private member profiles are accepted.
 
 B1 migration:
+- Grants only an active OWNER the ability to rename the family aggregate; the creator/ID remain immutable to the runtime, and renames append audit/outbox events.
 - Adds strict household name/type/archival fields, timestamps and a partial unique index for one active primary home per family.
 - Replaces the original broad household visibility with active OWNER, CO_PARENT or ADULT membership checks enforced by FORCE RLS. GUEST, TEEN and CHILD cannot access.
 - Uses PostgreSQL SECURITY DEFINER role lookups to avoid recursive membership RLS. Each function resolves the current transaction's server-set, OIDC-verified actor and runs under a fixed search path. PUBLIC EXECUTE is revoked; only family_runtime can call.
@@ -43,6 +44,7 @@ A family OWNER is not legally empowered to view another individual's personal, h
 
 The following signed OIDC access-token endpoints are added to OpenAPI 3.1 (contracts/openapi.json):
 
+- PATCH /api/v1/families/{familyId} — owner-only rename of the authoritative family record.
 - GET /api/v1/families/{familyId}/households — adult family roles, max 100.
 - POST /api/v1/families/{familyId}/households — OWNER/CO_PARENT.
 - PATCH /api/v1/families/{familyId}/households/{householdId} — OWNER/CO_PARENT.
@@ -62,7 +64,7 @@ The existing B0 signed identity and family aggregate endpoints remain unchanged.
 New sidebar route: Live Registry (also linked from Family overview). The Live Registry supports:
 
 - OIDC sign-in and local sign-out; verified actor display.
-- Live family list, family switch, and creation in PostgreSQL.
+- Live family list, family switch, creation and owner-governed renaming in PostgreSQL.
 - Non-sensitive household list, create, edit, and archive based on server role.
 - OWNER-only verified adult/guest roster, one-time invitations, limited role changes and revocation.
 - Identity-bound invitation acceptance.
