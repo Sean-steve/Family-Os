@@ -1,12 +1,12 @@
 import { useMemo, useState, type FormEvent } from "react";
 import {
-  Activity, ArrowLeft, ArrowRight, Baby, BookOpenText, CalendarDays, Check, CheckCircle2,
-  ChevronDown, ChevronRight, Crown, Edit3, Heart, Home, Info, MapPin, MoreHorizontal,
+  Activity, ArrowRight, Baby, Check, CheckCircle2,
+  ChevronRight, Crown, Edit3, Heart, Home, Info, MapPin,
   Plus, Search, ShieldCheck, Sparkles, Trash2, UserPlus, UsersRound, X
 } from "lucide-react";
 import type { AppData, Member } from "../data";
 import {
-  activeMembers, assignHousehold, canArchiveMember, freshId, HOUSEHOLD_LABELS,
+  activeMembers, canArchiveMember, freshId, HOUSEHOLD_LABELS,
   profileFor, RELATIONSHIP_LABELS, ROLE_LABELS, setPrimaryHousehold, validateRelationship
 } from "./model";
 import type {
@@ -267,7 +267,6 @@ export default function FamilyWorkspace({ data, onChange, onToast, navigate }: P
     !!m && profile(m).status === "ACTIVE");
   const treeRoot = membersOnRoot.filter(m => parentLinks.some(r => r.fromId === m.id));
   const isolated = membersOnRoot.filter(m => !treeRoot.some(r => r.id === m.id));
-  const ancestorIds = treeRoot.map(m => m.id);
 
   function showTab(next: Tab) { setTab(next); setQuery(""); }
 
