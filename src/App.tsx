@@ -13,6 +13,8 @@ import type { AppData, Goal, Member } from "./data";
 import FamilyWorkspace from "./family/FamilyWorkspace";
 import OperationsWorkspace from "./operations/OperationsWorkspace";
 import StrategyWorkspace from "./strategy/StrategyWorkspace";
+import GovernanceWorkspace from "./governance/GovernanceWorkspace";
+import { normalizeGovernance, decisionNeedsInput } from "./governance/model";
 import { migrateStrategy, normalizedGoals, recordGoalProgress } from "./strategy/model";
 import { clockDisplay, dateKey, dateLabel, eventDate, eventsBetween, eventsOnDate, normalizeOperations, tasksOnDate, taskDoneOn, toggleTaskForDate, shiftDate } from "./operations/model";
 import { activeMembers, migrateFamilyData, profileFor } from "./family/model";
@@ -38,7 +40,7 @@ function readPreview(): AppData {
         Array.isArray(parsed.members) && Array.isArray(parsed.tasks) &&
         "goals" in parsed && Array.isArray(parsed.goals) &&
         "events" in parsed && Array.isArray(parsed.events) &&
-        "upcoming" in parsed && Array.isArray(parsed.upcoming)) return { ...(parsed as AppData), family: migrateFamilyData((parsed as Partial<AppData>).family), operations: normalizeOperations((parsed as Partial<AppData>).operations), strategy: migrateStrategy((parsed as Partial<AppData>).strategy), goals: normalizedGoals((parsed as AppData).goals) };
+        "upcoming" in parsed && Array.isArray(parsed.upcoming)) return { ...(parsed as AppData), family: migrateFamilyData((parsed as Partial<AppData>).family), operations: normalizeOperations((parsed as Partial<AppData>).operations), strategy: migrateStrategy((parsed as Partial<AppData>).strategy), governance: normalizeGovernance((parsed as Partial<AppData>).governance), goals: normalizedGoals((parsed as AppData).goals) };
   } catch { /* local storage can be disabled; use preview state */ }
   return seed;
 }
@@ -262,7 +264,7 @@ export default function App() {
             <MetricCard title="Today" value={dashboardEvents.length} foot="events" icon={CalendarDays} tone="blue" onClick={() => navigate("Calendar")}/>
             <MetricCard title="Family Goals" value={data.goals.filter(g => g.status !== "ARCHIVED").length} foot="Tracked locally" icon={Target} tone="rose" onClick={() => openAdd("Goal")}/>
             <MetricCard title="Responsibilities" value={dashboardTasks.length} foot={percent + "% completed"} icon={CheckCircle2} tone="green" onClick={() => openAdd("Task")}/>
-            <MetricCard title="Decisions" value="2" foot="awaiting input" icon={UsersRound} tone="purple" onClick={() => navigate("Decisions")}/>
+            <MetricCard title="Decisions" value={data.governance.decisions.filter(decisionNeedsInput).length} foot="need local input" icon={UsersRound} tone="purple" onClick={() => navigate("Decisions")}/>
             <MetricCard title="Family Health" value="Good" foot="sample status" icon={Heart} tone="green" onClick={() => showDetails("Family Health","This is an illustrative dashboard indicator only; no health information is connected. Health context will require consent and an authorised integration.","Preview indicator")}/>
             <MetricCard title="Risks & Alerts" value="1" foot="needs attention" icon={TriangleAlert} tone="orange" onClick={() => showDetails("Alerts","The alert cards are fictional design examples. Future risk intelligence will provide evidence, confidence, freshness and privacy controls.","Preview indicator")}/>
           </section>
@@ -355,6 +357,7 @@ export default function App() {
         initialAction={operationsAction} onInitialActionConsumed={() => setOperationsAction(null)} /> :
       route === "Goals" ? <StrategyWorkspace data={data} onChange={setData} onToast={setToast} navigate={navigate}
         initialAction={strategyAction} onInitialActionConsumed={() => setStrategyAction(null)} /> :
+      route === "Decisions" ? <GovernanceWorkspace data={data} onChange={setData} onToast={setToast} navigate={navigate} /> :
       <main className="phase-page">
         <button className="back-link" onClick={() => navigate("Dashboard")}><ArrowLeft size={17}/> Back to dashboard</button>
         <div className="phase-hero"><span className="phase-tag">Planned for Phase {phase}</span><span className="phase-icon"><Compass size={31}/></span><h1>{route}</h1><p>{navigationDescriptions[route] || "A dedicated Family OS workspace is planned for an upcoming development phase."}</p><div className="phase-actions"><button className="primary-button" onClick={() => navigate("Dashboard")}>Return to Family Command Center <ArrowRight size={17}/></button><button className="secondary-button" onClick={() => setSearchOpen(true)}><Search size={17}/> Search preview</button></div></div>
