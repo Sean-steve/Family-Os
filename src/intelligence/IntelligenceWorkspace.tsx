@@ -179,7 +179,7 @@ export default function IntelligenceWorkspace({data,onChange,onToast,navigate}:P
         </section>
         <section className="in-panel"><div className="in-panel-top"><h3>Evidence readiness</h3>
           <button className="in-link" onClick={()=>openSection("Briefings")}>Source details <ArrowRight size={15}/></button></div>
-          <div className="in-readiness-list">{coverage.map(c=><div key={c.area}><strong>{c.area}</strong><EvidenceBadge status={c.status}/></div>)}</div>
+          <div className="in-readiness-list">{coverage.map(c=><StatusCard entry={c} key={c.area} onNavigate={navigate}/>)}</div>
           <p className="in-low">HumanKernelOS, Finance OS and Health/Nutrition OS are not connected to this prototype.</p>
         </section>
       </div>
