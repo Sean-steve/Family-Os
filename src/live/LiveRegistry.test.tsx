@@ -37,7 +37,7 @@ describe("B1 safe browser sign-in configuration",()=>{
   });
   it("renders an honest disabled state, never fabricated authenticated households",()=>{
     const rendered=renderToStaticMarkup(<LiveRegistry navigate={()=>undefined}/>);
-    expect(rendered).toContain("server-authoritative");
+    expect(rendered).toContain("SERVER-AUTHORITATIVE");
     expect(rendered).toContain("Production identity connection is not configured");
     expect(rendered).toContain("No child enrollment");
     expect(rendered).not.toContain("You are signed in");
