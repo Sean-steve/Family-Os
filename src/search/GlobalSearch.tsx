@@ -55,7 +55,7 @@ export default function GlobalSearch({data,mode="page",initialQuery="",onSelect,
       <span>{mode==="modal"?"↑ / ↓ choose · Enter open · Esc close":"Select a result to open its source workspace"}</span></div>
     <div className="se-results" id="family-search-results" role="listbox" aria-label="Search results">
       {groups.map(group=><div className="se-group" key={group.area} role="group" aria-label={group.area}>
-        <h2>{group.area}</h2>{group.items.map(entry=>{
+        <div className="se-group-heading" role="presentation" aria-hidden="true">{group.area}</div>{group.items.map(entry=>{
           const matched=ordered.find(x=>x.item.id===entry.id);const indexValue=matched?.i??0;
           return <button key={entry.id} id={"search-result-"+indexValue} type="button"
             role="option" aria-selected={activeIndex===indexValue} title={entry.accessibilityNote}
