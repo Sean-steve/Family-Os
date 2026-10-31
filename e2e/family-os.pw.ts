@@ -174,3 +174,19 @@ test("complete family journey: experience -> calendar -> memory -> legacy with c
   await page.reload();
   await expect(page.locator(".lf-legacy-card").filter({hasText:title})).toBeVisible();
 });
+
+test("B1 Live Registry is a distinct routed workspace with fail-closed provider activation",async({page})=>{
+  await page.goto("/Family-Os/#/Live%20Registry");
+  await expect(page.locator(".lr-workspace")).toBeVisible();
+  await expect(page.getByText("Production identity connection is not configured")).toBeVisible();
+  await expect(page.getByText("No child enrollment", {exact:false})).toBeVisible();
+  await expect(page.getByRole("button",{name:"Sign in with OIDC"})).toHaveCount(0);
+  await expect(page.getByRole("navigation",{name:"Main navigation"})
+    .getByRole("button",{name:"Live Registry"})).toHaveAttribute("aria-current","page");
+  await page.getByRole("button",{name:"Open fictional Family preview"}).click();
+  await expect(page).toHaveURL(/#\/Family$/);
+  await expect(page.getByText("Fictional Family preview")).toBeVisible();
+  await page.getByRole("button",{name:"Open Live Registry"}).click();
+  await expect(page).toHaveURL(/#\/Live%20Registry$/);
+  await expect(page.locator(".lr-workspace")).toBeVisible();
+});
