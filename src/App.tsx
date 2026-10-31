@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import {
-  Activity, AlertCircle, ArrowLeft, ArrowRight, Bell, BookHeart, CalendarDays,
+  Activity, ArrowLeft, ArrowRight, Bell, BookHeart, CalendarDays,
   Check, CheckCircle2, ChevronDown, ChevronRight, Circle, ClipboardCheck,
   Clock3, Command, Compass, Heart, HeartHandshake, Home, Info, Lightbulb,
   ListTodo, Menu, MessageSquareText, Moon, Plus, Search, Settings2, ShieldCheck,
