@@ -43,6 +43,14 @@ Verification: npm run typecheck:api; npm run test:api (requires migrated Postgre
 
 Never expose admin database credentials, import fictional frontend sample records as real data, or treat family role labels or localStorage as authenticated access.
 
+## B1.1 — Staging Identity & Infrastructure (provider activation pending)
+
+B1.1 adds fail-closed HTTPS OIDC discovery verification before the Fastify listener starts, a compiled non-root API image, a pinned Keycloak realm with a PKCE SPA client and explicit API audience, Caddy TLS ingress, a restricted migration job, and separate live-staging certification scripts. Existing Family OS preview records remain fictional and are not copied into PostgreSQL.
+
+**Code and staging package are not a deployed service.** Staging requires a host, two managed TLS PostgreSQL databases, DNS, secrets, an actual Keycloak realm and live two-user OAuth/OTP certification. GitHub Pages still requires a repository owner to enable it in Settings. The protected staging workflow cannot run until its environment SSH credentials and backup approval are supplied.
+
+Engineering and operator runbook: [Phase B1.1](docs/phase-b1-1.md).
+
 ## GitHub Pages
 
 The Vite site base is `/Family-Os/`. The connected app cannot create the repository's Pages site; this requires a one-time owner action:
