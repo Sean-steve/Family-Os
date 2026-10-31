@@ -10,7 +10,7 @@ Implemented in React/TypeScript as a frontend-only, interactive local preview. P
 | Family Overview | Editable family name and motto, member count, coordinator/carer count, children/teen count, household count, relationship count, family cards, household summary, relationship mini-tree |
 | Members | Searchable/filterable member directory, profile cards, person details drawer, member add/edit, archive/restore |
 | Family Tree | Parent-based generational visualization, tappable members, recorded connections and link creation |
-| Households | Create/edit households, assign multiple members to multiple homes, choose primary home, archive non-final household |
+| Households | Create/edit households, assign multiple members to multiple homes, choose primary home, archive/restore non-final household |
 | Relationships | Record partner, parent-of, sibling, guardian-of, grandparent-of and extended relationships; end records while preserving history |
 | Roles & Access | Role catalogue, role-aware member assignment and illustrative capabilities matrix with explicit no-auth warning |
 
