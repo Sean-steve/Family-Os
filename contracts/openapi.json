@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Family OS Foundation API",
-    "version": "0.1.0-b0",
-    "description": "Phase B0 foundation only. No live private family modules, AI, media or child-profile endpoints. All bearer tokens must be audience-bound signed OIDC access tokens, never frontend roles."
+    "version": "0.2.0-b1",
+    "description": "Authenticated Family OS B1 adult household registry and owner-governed memberships; private profiles, minors, consent and cross-OS authority remain unavailable. B1 SPA uses OIDC code+PKCE and sends access token only in Authorization header."
   },
   "servers": [
     {
@@ -23,6 +23,18 @@
     {
       "name": "families",
       "description": "Tenant bootstrap and own-family lookup"
+    },
+    {
+      "name": "households",
+      "description": "Family-scoped non-sensitive household labels, allowed for OWNER/CO_PARENT write and ADULT read"
+    },
+    {
+      "name": "membership",
+      "description": "Owner-only verified adult/guest roster and restricted role/revocation"
+    },
+    {
+      "name": "invitations",
+      "description": "Owner-issued one-time 48-hour codes bound to pre-registered OIDC actor IDs"
     }
   ],
   "security": [],
@@ -342,6 +354,641 @@
           }
         }
       }
+    },
+    "/api/v1/families/{familyId}/households": {
+      "get": {
+        "tags": [
+          "households"
+        ],
+        "operationId": "listHouseholds",
+        "summary": "List active non-sensitive household labels (adult roles only)",
+        "security": [
+          {
+            "OidcBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "familyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Visible household list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "items",
+                        "hasMore"
+                      ],
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Household"
+                          }
+                        },
+                        "hasMore": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Signed access token missing or invalid"
+          },
+          "403": {
+            "description": "Verified role forbidden"
+          },
+          "404": {
+            "description": "Family or record not visible"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "households"
+        ],
+        "operationId": "createHousehold",
+        "summary": "Create household label (OWNER or CO_PARENT)",
+        "security": [
+          {
+            "OidcBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "familyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HouseholdInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Household created and audit/outbox committed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Household"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Signed access token missing or invalid"
+          },
+          "403": {
+            "description": "Verified role forbidden"
+          },
+          "404": {
+            "description": "Family or record not visible"
+          }
+        }
+      }
+    },
+    "/api/v1/families/{familyId}/households/{householdId}": {
+      "patch": {
+        "tags": [
+          "households"
+        ],
+        "operationId": "updateHousehold",
+        "summary": "Update household label/kind (OWNER or CO_PARENT)",
+        "security": [
+          {
+            "OidcBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "familyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 120
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "PRIMARY_HOME",
+                      "SECONDARY_HOME",
+                      "SHARED_HOME",
+                      "OTHER"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Household updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Household"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Signed access token missing or invalid"
+          },
+          "403": {
+            "description": "Verified role forbidden"
+          },
+          "404": {
+            "description": "Family or record not visible"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "households"
+        ],
+        "operationId": "archiveHousehold",
+        "summary": "Soft archive household (OWNER or CO_PARENT)",
+        "security": [
+          {
+            "OidcBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "familyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Archived"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    },
+    "/api/v1/families/{familyId}/memberships": {
+      "get": {
+        "tags": [
+          "membership"
+        ],
+        "operationId": "listAdultMemberships",
+        "summary": "Owner-only roster of verified adult and guest OIDC actors; no profiles",
+        "security": [
+          {
+            "OidcBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "familyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Visible membership roster",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "items",
+                        "hasMore"
+                      ],
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Membership"
+                          }
+                        },
+                        "hasMore": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Signed access token missing or invalid"
+          },
+          "403": {
+            "description": "Verified role forbidden"
+          },
+          "404": {
+            "description": "Family or record not visible"
+          }
+        }
+      }
+    },
+    "/api/v1/families/{familyId}/memberships/{userId}": {
+      "patch": {
+        "tags": [
+          "membership"
+        ],
+        "operationId": "changeLimitedMemberRole",
+        "summary": "Owner can switch only ADULT/GUEST roles, never OWNER or minors",
+        "security": [
+          {
+            "OidcBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "familyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "role"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "role": {
+                    "enum": [
+                      "ADULT",
+                      "GUEST"
+                    ],
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Limited role updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Membership"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Signed access token missing or invalid"
+          },
+          "403": {
+            "description": "Verified role forbidden"
+          },
+          "404": {
+            "description": "Family or record not visible"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "membership"
+        ],
+        "operationId": "revokeLimitedMember",
+        "summary": "Owner revokes ADULT/GUEST membership; owner cannot be revoked or demoted",
+        "security": [
+          {
+            "OidcBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "familyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Membership revoked"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found or protected role"
+          }
+        }
+      }
+    },
+    "/api/v1/families/{familyId}/invitations": {
+      "post": {
+        "tags": [
+          "invitations"
+        ],
+        "operationId": "issueInvitation",
+        "summary": "Owner creates a one-time invitation bound to a verified OIDC actor ID",
+        "security": [
+          {
+            "OidcBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "familyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "targetUserId",
+                  "role"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "targetUserId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "ADULT",
+                      "GUEST"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Invitation created; secret returned once",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/InvitationCreated"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Signed access token missing or invalid"
+          },
+          "403": {
+            "description": "Verified role forbidden"
+          },
+          "404": {
+            "description": "Family or record not visible"
+          }
+        }
+      }
+    },
+    "/api/v1/invitations/{invitationId}/accept": {
+      "post": {
+        "tags": [
+          "invitations"
+        ],
+        "operationId": "acceptBoundInvitation",
+        "summary": "Signed target subject redeems own unexpired one-time invite",
+        "security": [
+          {
+            "OidcBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "invitationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "code"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Invitation accepted and membership created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "familyId",
+                        "role"
+                      ],
+                      "properties": {
+                        "familyId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "role": {
+                          "enum": [
+                            "ADULT",
+                            "GUEST"
+                          ],
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Signed access token missing or invalid"
+          },
+          "403": {
+            "description": "Verified role forbidden"
+          },
+          "404": {
+            "description": "Family or record not visible"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -450,6 +1097,157 @@
             "type": "string",
             "minLength": 2,
             "maxLength": 120
+          }
+        }
+      },
+      "Household": {
+        "type": "object",
+        "required": [
+          "id",
+          "familyId",
+          "name",
+          "kind",
+          "createdAt",
+          "updatedAt",
+          "archivedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "familyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "PRIMARY_HOME",
+              "SECONDARY_HOME",
+              "SHARED_HOME",
+              "OTHER"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "archivedAt": {
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "HouseholdInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "PRIMARY_HOME",
+              "SECONDARY_HOME",
+              "SHARED_HOME",
+              "OTHER"
+            ]
+          }
+        }
+      },
+      "Membership": {
+        "type": "object",
+        "required": [
+          "userId",
+          "role",
+          "state",
+          "joinedAt"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "OWNER",
+              "CO_PARENT",
+              "ADULT",
+              "GUEST"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "ACTIVE"
+            ]
+          },
+          "joinedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "InvitationCreated": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "targetUserId",
+          "role",
+          "expiresAt",
+          "code"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "targetUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "ADULT",
+              "GUEST"
+            ]
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "code": {
+            "type": "string",
+            "description": "Returned once, 64 lowercase hexadecimal characters. Do not log or persist in browser storage.",
+            "pattern": "^[0-9a-f]{64}$"
           }
         }
       }
