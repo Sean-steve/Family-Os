@@ -143,6 +143,17 @@ describe("B1 authenticated household and adult-only membership flows",()=>{
       "WHERE relname='invitations' AND relnamespace='family'::regnamespace");
     expect(flags.rows[0]).toEqual({relrowsecurity:true,relforcerowsecurity:true});
   });
+  it("rejects an expired invite even with the correct identity and code",async()=>{
+    const issued=await req(ownerId,"POST","/api/v1/families/"+ownerFamily+"/invitations",
+      {targetUserId:principal(strangerId).actorId,role:"GUEST"});
+    expect(issued.statusCode).toBe(201);
+    const id=issued.json().data.id,code=issued.json().data.code;
+    await admin.query("UPDATE family.invitations SET created_at=now()-interval '4 days', "+
+      "expires_at=now()-interval '2 days' WHERE id=$1",[id]);
+    expect((await req(strangerId,"POST","/api/v1/invitations/"+id+"/accept",{code})).statusCode).toBe(404);
+    const rows=await admin.query("SELECT accepted_at FROM family.invitations WHERE id=$1",[id]);
+    expect(rows.rows[0].accepted_at).toBeNull();
+  });
   it("revokes guest/adult membership and blocks tenant access immediately",async()=>{
     const url="/api/v1/families/"+ownerFamily+"/memberships/"+principal(adultId).actorId;
     expect((await req(ownerId,"DELETE",url)).statusCode).toBe(204);
