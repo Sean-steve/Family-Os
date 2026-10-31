@@ -19,7 +19,7 @@ export function loadConfig(env:NodeJS.ProcessEnv=process.env):ApiConfig{
   if(p.NODE_ENV!=="test"&&(!p.OIDC_ISSUER.startsWith("https://")||!p.OIDC_JWKS_URI.startsWith("https://"))){
     throw new Error("OIDC issuer and JWKS must use HTTPS outside tests.");
   }
-  if(p.NODE_ENV==="production"&&!p.DATABASE_URL.includes("sslmode=")){
+  if(p.NODE_ENV==="production"&&!["require","verify-ca","verify-full"].includes(new URL(p.DATABASE_URL).searchParams.get("sslmode")||"")){
     throw new Error("Production DATABASE_URL must explicitly configure PostgreSQL TLS (sslmode).");
   }
   const allowedOrigins=p.APP_ALLOWED_ORIGINS.split(",").map(s=>s.trim()).filter(Boolean);
