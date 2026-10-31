@@ -110,7 +110,7 @@ export function progressOf(goals:(Goal&GoalExtension)[]):number|null {
   if(!eligible.length)return null;
   return Math.round(eligible.reduce((sum,g)=>sum+clampProgress(g.progress),0)/eligible.length);
 }
-export function objectiveProgress(s:StrategyState,goals:Goal[],id:string):number|null {
+export function objectiveProgress(_s:StrategyState,goals:Goal[],id:string):number|null {
   return progressOf(goals.filter(g=>g.objectiveId===id));
 }
 export function milestoneProgress(s:StrategyState,goals:Goal[],id:string):number|null {
