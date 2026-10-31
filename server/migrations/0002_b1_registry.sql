@@ -31,6 +31,12 @@ REVOKE ALL ON FUNCTION family.can_read_household(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION family.active_role(uuid),family.is_owner(uuid),
   family.can_manage_household(uuid),family.can_read_household(uuid) TO family_runtime;
 
+-- Registry title edits are owner-governed; immutable family ID and
+-- creator cannot be reassigned by the restricted API role.
+CREATE POLICY family_owner_rename ON family.families FOR UPDATE TO family_runtime
+  USING (family.is_owner(id)) WITH CHECK (family.is_owner(id));
+GRANT UPDATE(name,updated_at) ON family.families TO family_runtime;
+
 -- Only adult members with an active role may read non-sensitive household
 -- labels. Guests, teens and children have no access or ABAC bypass.
 ALTER TABLE family.households
