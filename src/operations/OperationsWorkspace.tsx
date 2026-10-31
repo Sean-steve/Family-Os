@@ -6,6 +6,7 @@ import {
   ShieldCheck, Sparkles, Trash2, TriangleAlert, UsersRound, X
 } from "lucide-react";
 import type { AppData, Member, PlanEvent, Task } from "../data";
+import type { SearchEntry } from "../search/model";
 import { activeMembers, freshId } from "../family/model";
 import type { Category, FamilyNote, Priority, Repeat, Routine } from "./model";
 import {
@@ -20,7 +21,7 @@ type Section = "Plan" | "Calendar" | "Responsibilities" | "Routines";
 type Props = {
   route: Section; data: AppData; onChange: (fn:(prev:AppData)=>AppData)=>void;
   onToast:(message:string)=>void; navigate:(route:string)=>void; initialAction?:"Task"|"Event"|null;
-  onInitialActionConsumed?:()=>void;
+  onInitialActionConsumed?:()=>void;searchFocus?:SearchEntry;
 };
 type TaskDraft = { title:string; description:string; category:Category; dueDate:string; assigneeIds:string[]; householdId:string; priority:Priority; repeat:Repeat };
 type EventDraft = { title:string; note:string; date:string; time:string; endTime:string; location:string; attendees:string[]; householdId:string; category:Category };
@@ -63,7 +64,7 @@ function Participants({value,all,onChange}:{value:string[];all:Member[];onChange
   return <div className="ops-participants">{all.map(m=><label key={m.id} className={value.includes(m.id)?"selected":""}>
     <input type="checkbox" checked={value.includes(m.id)} onChange={e=>onChange(e.target.checked?[...value,m.id]:value.filter(id=>id!==m.id))}/>{m.name}</label>)}</div>;
 }
-export default function OperationsWorkspace({route,data,onChange,onToast,navigate,initialAction,onInitialActionConsumed}:Props) {
+export default function OperationsWorkspace({route,data,onChange,onToast,navigate,initialAction,onInitialActionConsumed,searchFocus}:Props) {
   const [selectedDay,setSelectedDay]=useState(today);
   const [focusMonth,setFocusMonth]=useState(today.slice(0,7)+"-01");
   const [calendarView,setCalendarView]=useState<"MONTH"|"WEEK">("MONTH");
@@ -79,6 +80,15 @@ export default function OperationsWorkspace({route,data,onChange,onToast,navigat
   const [noteDraft,setNoteDraft]=useState<NoteDraft>(defaultNote);
   const [formError,setFormError]=useState("");
   const [showArchivedRoutines,setShowArchivedRoutines]=useState(false);
+  useEffect(()=>{
+    if(!searchFocus||searchFocus.kind!=="SHARED_RECORD")return;
+    if(route==="Responsibilities"&&searchFocus.area==="Responsibilities"){
+      setSearch(searchFocus.title);setTaskFilter("ALL");setHouseFilter("ALL");setPersonFilter("ALL");
+    }
+    if(route==="Calendar"&&searchFocus.area==="Calendar"&&searchFocus.referenceDate){
+      setSelectedDay(searchFocus.referenceDate);setFocusMonth(searchFocus.referenceDate.slice(0,7)+"-01");
+    }
+  },[searchFocus,route]);
   const members=activeMembers(data.members,data.family);
   const houses=data.family.households.filter(h=>h.status==="ACTIVE");
   const primaryHouse=houses.find(h=>h.isPrimary)?.id||houses[0]?.id||"";
