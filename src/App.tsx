@@ -17,6 +17,7 @@ import GovernanceWorkspace from "./governance/GovernanceWorkspace";
 import FamilyLifeWorkspace from "./life/FamilyLifeWorkspace";
 import IntelligenceWorkspace from "./intelligence/IntelligenceWorkspace";
 import GlobalSearch from "./search/GlobalSearch";
+import LiveRegistry from "./live/LiveRegistry";
 import SettingsWorkspace from "./settings/SettingsWorkspace";
 import {type SearchEntry,routeFromSearch} from "./search/model";
 import { deriveSignals, evidenceCoverage, isDismissed, migrateIntelligence } from "./intelligence/model";
@@ -28,7 +29,7 @@ import { activeMembers, migrateFamilyData, profileFor } from "./family/model";
 
 const STORE_KEY = "family-os-preview-v1";
 const icons: Record<string, LucideIcon> = {
-  dashboard: Home, family: UsersRound, plan: ClipboardCheck, goals: Target,
+  dashboard: Home, family: UsersRound, registry: ShieldCheck, plan: ClipboardCheck, goals: Target,
   decisions: HeartHandshake, calendar: CalendarDays, tasks: ListTodo,
   routines: Clock3, experiences: Compass, memory: BookHeart, traditions: Heart, legacy: TreePine, insights: Activity,
   search: Search
@@ -383,6 +384,7 @@ export default function App() {
       route === "Decisions" ? <GovernanceWorkspace data={data} onChange={setData} onToast={setToast} navigate={navigate} /> :
       (route === "Experiences" || route === "Memory" || route === "Traditions" || route === "Legacy") ?
       <FamilyLifeWorkspace route={route} data={data} onChange={setData} onToast={setToast} navigate={navigate} /> :
+      route === "Live Registry" ? <LiveRegistry navigate={navigate} /> :
       route === "Insights" ? <IntelligenceWorkspace data={data} onChange={setData} onToast={setToast} navigate={navigate} /> :
       route === "Search" ? <GlobalSearch data={data} onSelect={chooseSearch} /> :
       route === "Settings" ? <SettingsWorkspace data={data} dark={dark} onTheme={setDark}

@@ -285,6 +285,11 @@ export default function FamilyWorkspace({ data, onChange, onToast, navigate }: P
 
   return <main className="family-workspace">
     <div className="family-breadcrumb"><button onClick={() => navigate("Dashboard")}>Dashboard</button><ChevronRight size={14}/><span>Family</span></div>
+    <div className="lr-family-integration" role="note"><ShieldCheck size={19}/>
+      <span><strong>Fictional Family preview</strong> — the people, relationships and household details below are
+        browser-local examples, not verified records. Use the authenticated registry for live family/household governance.</span>
+      <button onClick={()=>navigate("Live Registry")}>Open Live Registry <ArrowRight size={15}/></button>
+    </div>
     <div className="family-header-card">
       <div className="family-header-art"><div className="family-orbit family-orbit-one"/><div className="family-orbit family-orbit-two"/><Heart size={26} /></div>
       <div className="family-header-copy">

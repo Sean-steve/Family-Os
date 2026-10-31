@@ -134,7 +134,10 @@ describe("B0 authenticated and tenant-isolated family bootstrap",()=>{
       (await db.query("SELECT id FROM family.families WHERE id=$1",[familyId])).rows);
     expect(visible).toEqual([]);
     await expect(pool.query("SELECT * FROM family.consent_grants")).rejects.toThrow();
-    await expect(pool.query("UPDATE family.families SET name='bypassed' WHERE id=$1",[familyId])).rejects.toThrow();
+    const unauthenticatedUpdate=await pool.query("UPDATE family.families SET name='bypassed' WHERE id=$1",[familyId]);
+    expect(unauthenticatedUpdate.rowCount).toBe(0);
+    const persisted=await admin.query("SELECT name FROM family.families WHERE id=$1",[familyId]);
+    expect(persisted.rows[0].name).not.toBe("bypassed");
     const controls=await admin.query("SELECT relname,relrowsecurity,relforcerowsecurity FROM pg_class "+
       "WHERE relnamespace='family'::regnamespace AND relname IN ('families','memberships','identities','consent_grants')");
     expect(controls.rows).toHaveLength(4);

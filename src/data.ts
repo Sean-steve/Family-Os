@@ -60,6 +60,7 @@ export const seed: AppData = {
 export const navItems = [
   { label: "Dashboard", icon: "dashboard", phase: 1 },
   { label: "Family", icon: "family", phase: 2 },
+  { label: "Live Registry", icon: "registry", phase: 9 },
   { label: "Plan", icon: "plan", phase: 3 },
   { label: "Goals", icon: "goals", phase: 4 },
   { label: "Decisions", icon: "decisions", phase: 5 },
@@ -74,7 +75,8 @@ export const navItems = [
   { label: "Search", icon: "search", phase: 8 }
 ];
 export const navigationDescriptions: Record<string, string> = {
-  Family: "Member profiles, relationships, household structure and role-aware spaces.",
+  Family: "Fictional member profiles and household design — browser-only, not authenticated.",
+  "Live Registry": "Authenticated OIDC/PostgreSQL family tenancy, adult households and governed membership invitations.",
   Plan: "Your family's shared planning workspace, capacity and coordination.",
   Goals: "Vision, missions, milestones and meaningful family progress.",
   Decisions: "Discuss options, compare scenarios and document shared decisions.",

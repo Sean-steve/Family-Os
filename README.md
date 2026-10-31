@@ -1,6 +1,6 @@
 # Family OS
 
-Family OS is a family coordination and planning frontend prototype intended for eventual integration into HumanKernelOS. **Phase B0 now includes a separate backend foundation with PostgreSQL and signed OIDC access-token verification, but the frontend is still a browser-local preview. No real OIDC provider, frontend sign-in, secure personal domain, protected family media or live cross-OS integration is activated.**
+Family OS is a family coordination and planning frontend prototype intended for eventual integration into HumanKernelOS. **Phase B1 adds a real authenticated Live Registry frontend and role-governed PostgreSQL family/household APIs. The original family dashboards and individual-domain screens remain fictional browser-local previews. An actual OIDC provider/API deployment is not activated or publicly hosted by this repository.**
 
 ## Frontend scope — Phases 1–8
 
@@ -28,14 +28,16 @@ The end-to-end suite runs the built frontend using Playwright Chromium. The PR w
 
 Ctrl/⌘ + K opens a modal search. The full Search workspace is also available from navigation. Search indexes route names and explicitly shared family tasks, dated shared events, and non-archived goals. Private memories, family decisions, personal profiles and legacy stories are deliberately excluded. **This is only a data-indexing restriction, not authenticated access control.**
 
-## Backend Phase B0 — PostgreSQL & OIDC identity contracts
+## Backend Phase B0/B1 — Authenticated Family Registry & PostgreSQL
 
-The new backend uses Node.js 22, Fastify 5, PostgreSQL 17, checked SQL migrations, a restricted API database role, signed OIDC RS256 JWT verification and family-scoped row-level security. It provides liveness/readiness, verified identity, and create/list/get family aggregate endpoints. Family creation persists an OWNER membership, audit event and outbox event atomically.
+The backend uses Node.js 22, Fastify 5, PostgreSQL 17, checked SQL migrations, a restricted API database role, signed OIDC RS256 JWT verification and family-scoped row-level security. B1 adds household CRUD, owner-only adult/guest membership governance, identity-bound expiring invitation redemption, audit and transactional outbox.
 
-Backend engineering guide: [docs/phase-b0.md](docs/phase-b0.md).
+Backend engineering guides: [B0](docs/phase-b0.md) and [B1](docs/phase-b1.md).
 API contract: [contracts/openapi.json](contracts/openapi.json).
 
-Local setup: copy server/.env.example to an untracked .env.b0, replace placeholder database passwords and configure your real HTTPS OIDC issuer, JWKS URI and audience. Export those variables, run docker compose --env-file .env.b0 up -d postgres, then npm run db:migrate and npm run start:api.
+Local setup: copy server/.env.example to an untracked .env.b0, replace placeholder database passwords and configure a real HTTPS OIDC issuer, JWKS URI and audience. Export variables, start PostgreSQL using Docker Compose, then run npm run db:migrate and npm run start:api. Apply both migrations 0001/0002.
+
+For the authenticated UI, configure the public PKCE client variables from config/frontend.env.example in root .env.local. The Live Registry route requires a separately deployed HTTPS API and trusted OIDC provider. Without them, its UI is intentionally disabled and makes no API requests. Access tokens are kept in memory only; no browser demo data is promoted into PostgreSQL.
 
 Verification: npm run typecheck:api; npm run test:api (requires migrated PostgreSQL; uses ephemeral test JWKS, NOT an activated identity service).
 
@@ -54,4 +56,4 @@ A green build and merged code do **not** mean that GitHub Pages was published.
 
 ## Next direction
 
-Phase B1 — Authoritative Family Registry and Membership Services, verified guardian/child identity and consent safeguards, domain-specific RBAC/ABAC, first authenticated frontend-to-backend integration, protected media and governed Kernel contracts.
+Phase B1.1 — Real OIDC Provider Activation, Staging & Full Security Certification. Then Phase B2 — Durable Family Operations, Goals and Governance APIs. Child/guardian identity and private cross-OS consent remain guarded blockers.

@@ -25,7 +25,8 @@
     "@fastify/rate-limit": "^11.1.0",
     "pg": "^8.16.0",
     "jose": "^6.1.0",
-    "zod": "^4.1.0"
+    "zod": "^4.1.0",
+    "oidc-client-ts": "^3.5.0"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
