@@ -1,16 +1,16 @@
 import { useMemo, useState, useEffect, type FormEvent } from "react";
 import {
-  ArrowLeft, ArrowRight, Bell, CalendarDays, Check, CheckCheck, CheckCircle2, ChevronDown,
-  ChevronLeft, ChevronRight, Circle, Clock3, Edit3, Filter, HeartHandshake, Home, Info,
-  ListChecks, MapPin, Megaphone, MoreHorizontal, Pause, Pin, Plus, Repeat2, Search,
-  ShieldCheck, Sparkles, Sun, Target, Trash2, TriangleAlert, UsersRound, X
+  ArrowRight, CalendarDays, Check, CheckCheck, ChevronDown,
+  ChevronLeft, ChevronRight, Circle, Clock3, Edit3, HeartHandshake, Info,
+  ListChecks, MapPin, Megaphone, Pause, Pin, Plus, Repeat2, Search,
+  ShieldCheck, Sparkles, Trash2, TriangleAlert, UsersRound, X
 } from "lucide-react";
 import type { AppData, Member, PlanEvent, Task } from "../data";
 import { activeMembers, freshId } from "../family/model";
 import type { Category, FamilyNote, Priority, Repeat, Routine } from "./model";
 import {
   categoryLabels, clockDisplay, completedRoutine, dateKey, dateLabel, dateParts, dayOfWeek,
-  eventDate, eventsBetween, eventsOnDate, findEventConflicts, monthGrid, overdueTasks,
+  eventDate, eventsBetween, eventsOnDate, findEventConflicts, monthGrid,
   parseClock, repeatLabels, routinesOnDate, scheduledRoutine, shiftDate, startOfWeek,
   taskAnchor, taskDoneOn, taskLoadByMember, tasksOnDate, toggleRoutineDay,
   toggleRoutineStep, toggleTaskForDate, weekDays
@@ -30,7 +30,6 @@ type ModalKind = "Task"|"Event"|"Routine"|"Note";
 const today=dateKey();
 const categories=Object.keys(categoryLabels) as Category[];
 const taskRepeats=Object.keys(repeatLabels) as Repeat[];
-const dayLetters=["M","T","W","T","F","S","S"];
 const categoryTones:Record<Category,string>={HOME:"sky",SCHOOL:"purple",HEALTH:"mint",FAMILY:"rose",WORK:"apricot",OTHER:"slate"};
 const defaultTask=():TaskDraft=>({title:"",description:"",category:"HOME",dueDate:today,assigneeIds:[],householdId:"",priority:"MEDIUM",repeat:"NONE"});
 const defaultEvent=():EventDraft=>({title:"",note:"",date:today,time:"17:00",endTime:"18:00",location:"",attendees:[],householdId:"",category:"FAMILY"});
@@ -88,9 +87,7 @@ export default function OperationsWorkspace({route,data,onChange,onToast,navigat
   const todayTasks=tasksOnDate(data.tasks,selectedDay);
   const todayRoutines=routinesOnDate(data.operations.routines,selectedDay);
   const unassigned=todayTasks.filter(t=>(t.assigneeIds||[]).length===0&&!taskDoneOn(t,selectedDay));
-  const overdue=overdueTasks(data.tasks,today);
   const totalPending=todayTasks.filter(t=>!taskDoneOn(t,selectedDay)).length;
-  const completedToday=todayTasks.filter(t=>taskDoneOn(t,selectedDay)).length;
   const load=taskLoadByMember(data.tasks,members.map(m=>m.id),selectedDay);
   const displayMonth=new Intl.DateTimeFormat("en-GB",{month:"long",year:"numeric",timeZone:"UTC"}).format(new Date(focusMonth+"T12:00:00Z"));
   const weekStart=startOfWeek(selectedDay);
@@ -264,7 +261,6 @@ export default function OperationsWorkspace({route,data,onChange,onToast,navigat
     setFocusMonth(next);setSelectedDay(next);
   }
   const openCount=Object.values(load).reduce((a,b)=>a+b,0);
-  const futureEvents=eventsBetween(data.events,today,shiftDate(today,14)).slice(0,6);
   return <main className="ops-workspace">
     <div className="ops-breadcrumb"><button onClick={()=>navigate("Dashboard")}>Dashboard</button><ChevronRight size={14}/><span>Family Operations</span><ChevronRight size={14}/><strong>{route}</strong></div>
     <div className="ops-hero"><div className="ops-hero-decoration"><div/><div/></div>
