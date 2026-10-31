@@ -10,7 +10,7 @@ describe("Phase 3 screens render",()=>{
     expect(html).toContain("Family Coordination");
     expect(html).toContain("Family Huddle");
     expect(html).toContain("Family Rhythms");
-    expect(html).toContain("Responsibility");
+    expect(html).toContain("Responsibilities today");
     expect(html).toContain("Frontend-only preview");
   });
   it("renders calendar month, week controls and agenda",()=>{
@@ -19,7 +19,7 @@ describe("Phase 3 screens render",()=>{
     expect(html).toContain("Month");
     expect(html).toContain("Week");
     expect(html).toContain("Add to this day");
-    expect(html).toContain("Family Calendar");
+    expect(html).toContain("SHARED FAMILY CALENDAR");
   });
   it("renders responsibilities with categories and completion",()=>{
     const html=renderToStaticMarkup(<OperationsWorkspace route="Responsibilities" {...base}/>);
