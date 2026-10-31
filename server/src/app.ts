@@ -28,9 +28,9 @@ export async function createApi(options:ApiOptions):Promise<FastifyInstance>{
     reply.header("Referrer-Policy","no-referrer");
     return payload;
   });
-  app.setErrorHandler((error,request,reply)=>{
+  app.setErrorHandler((_error,request,reply)=>{
     // No PostgreSQL errors, SQL, token hints, identity claims or stack traces.
-    request.log.error({code:"UNEXPECTED_API_ERROR",status:error.statusCode||500},"API request failed");
+    request.log.error({code:"UNEXPECTED_API_ERROR"},"API request failed");
     reply.code(500).send(jsonError("INTERNAL_ERROR","Unable to complete request."));
   });
   app.get("/health/live",async()=>({status:"ok",service:"family-os-api"}));
