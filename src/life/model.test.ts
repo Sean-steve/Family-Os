@@ -4,7 +4,7 @@ import {
   nextTraditionDate,normalizeLife,recordTraditionMoment,seedLife,sortMemories,
   validateExperience,validateLegacy,validateMemory,validateTradition,validDate
 } from "./model";
-import type {Experience,Memory,Tradition} from "./model";
+import type {Memory,Tradition} from "./model";
 const people=["alex","jamie","sam","ella","noah"];
 const goals=["g1","g2","g3"];
 describe("Phase 6 family life persistence",()=>{
@@ -105,7 +105,7 @@ describe("Traditions and recurrence",()=>{
     const next=recordTraditionMoment(template,"2026-10-31","Family fun", "");
     expect(next.moments).toHaveLength(template.moments.length+1);
     expect(template.moments.length).toBe(1);
-    expect(next.moments.at(-1)?.date).toBe("2026-10-31");
+    expect(next.moments[next.moments.length-1]?.date).toBe("2026-10-31");
     const mem=memoryFromTradition(template,"2026-10-31");
     expect(mem.traditionId).toBe(template.id);
     expect(mem.status).toBe("DRAFT");
