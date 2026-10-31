@@ -21,10 +21,10 @@
 
 ## Phase 1 validation gate
 
-- [ ] npm run typecheck
-- [ ] npm run build
-- [ ] Main branch deployment workflow passes
-- [ ] GitHub Pages URL confirmed live
+- [x] npm run typecheck — GitHub PR check passed
+- [x] npm run build — GitHub PR and main builds passed
+- [ ] Main branch deployment workflow passes — **blocked by missing Pages site; see README activation steps**
+- [ ] GitHub Pages URL confirmed live — pending Pages enablement
 - [ ] Desktop and mobile visual QA
 - [ ] Interaction checks: navigation, modal, create, toggles, theme, search, notification
 
