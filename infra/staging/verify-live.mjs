@@ -1,8 +1,13 @@
 #!/usr/bin/env node
 // Checks the REAL, publicly reachable staging provider/ingress. No account
 // secrets or access tokens are sent or printed. This is not a login test.
-const api=process.env.FAMILY_API_DOMAIN,identity=process.env.FAMILY_IDENTITY_DOMAIN;
-const web=process.env.FAMILY_WEB_ORIGIN;
+import {readFileSync} from "node:fs";
+const fromFile=process.argv[2]?Object.fromEntries(readFileSync(process.argv[2],"utf8")
+  .split(/\r?\n/).filter(x=>/^[A-Z_][A-Z0-9_]*=/.test(x))
+  .map(x=>{const i=x.indexOf("=");return [x.slice(0,i),x.slice(i+1).trim()];})):{};
+const api=process.env.FAMILY_API_DOMAIN||fromFile.FAMILY_API_DOMAIN;
+const identity=process.env.FAMILY_IDENTITY_DOMAIN||fromFile.FAMILY_IDENTITY_DOMAIN;
+const web=process.env.FAMILY_WEB_ORIGIN||fromFile.FAMILY_WEB_ORIGIN;
 if(!api||!identity||!web)throw new Error("FAMILY_API_DOMAIN, FAMILY_IDENTITY_DOMAIN and FAMILY_WEB_ORIGIN required");
 const issuer="https://"+identity+"/realms/family-os-staging";
 const endpoint="https://"+api;
