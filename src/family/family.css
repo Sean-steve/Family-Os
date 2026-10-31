@@ -293,3 +293,6 @@
   .family-modal-heading h2 { font-size: 19px; }
   .family-relationship-summary strong { font-size: 10px; }
 }
+
+.family-households-toolbar { display: flex; justify-content: flex-end; margin: -4px 0 14px; }
+.family-archived-home-chip { display: inline-flex; background: #fff1e9; color: #b87945; border-radius: 14px; font-size: 9px; padding: 3px 7px; font-weight: 800; margin: 0 4px 5px 0; }
