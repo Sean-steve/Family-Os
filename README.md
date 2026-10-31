@@ -1,6 +1,6 @@
 # Family OS
 
-Family OS is a family coordination and planning frontend prototype intended for eventual integration into HumanKernelOS. **This repository currently has no backend, authentication, enforced privacy, protected family media, or live cross-OS integrations.**
+Family OS is a family coordination and planning frontend prototype intended for eventual integration into HumanKernelOS. **Phase B0 now includes a separate backend foundation with PostgreSQL and signed OIDC access-token verification, but the frontend is still a browser-local preview. No real OIDC provider, frontend sign-in, secure personal domain, protected family media or live cross-OS integration is activated.**
 
 ## Frontend scope — Phases 1–8
 
@@ -28,6 +28,19 @@ The end-to-end suite runs the built frontend using Playwright Chromium. The PR w
 
 Ctrl/⌘ + K opens a modal search. The full Search workspace is also available from navigation. Search indexes route names and explicitly shared family tasks, dated shared events, and non-archived goals. Private memories, family decisions, personal profiles and legacy stories are deliberately excluded. **This is only a data-indexing restriction, not authenticated access control.**
 
+## Backend Phase B0 — PostgreSQL & OIDC identity contracts
+
+The new backend uses Node.js 22, Fastify 5, PostgreSQL 17, checked SQL migrations, a restricted API database role, signed OIDC RS256 JWT verification and family-scoped row-level security. It provides liveness/readiness, verified identity, and create/list/get family aggregate endpoints. Family creation persists an OWNER membership, audit event and outbox event atomically.
+
+Backend engineering guide: [docs/phase-b0.md](docs/phase-b0.md).
+API contract: [contracts/openapi.json](contracts/openapi.json).
+
+Local setup: copy server/.env.example to an untracked .env.b0, replace placeholder database passwords and configure your real HTTPS OIDC issuer, JWKS URI and audience. Export those variables, run docker compose --env-file .env.b0 up -d postgres, then npm run db:migrate and npm run start:api.
+
+Verification: npm run typecheck:api; npm run test:api (requires migrated PostgreSQL; uses ephemeral test JWKS, NOT an activated identity service).
+
+Never expose admin database credentials, import fictional frontend sample records as real data, or treat family role labels or localStorage as authenticated access.
+
 ## GitHub Pages
 
 The Vite site base is `/Family-Os/`. The connected app cannot create the repository's Pages site; this requires a one-time owner action:
@@ -41,4 +54,4 @@ A green build and merged code do **not** mean that GitHub Pages was published.
 
 ## Next direction
 
-Phase B0 — Authenticated Family OS backend, verified identity, child/guardian and consent safeguards, PostgreSQL contracts, authoritative event boundaries, protected media, durable audits and Kernel integration.
+Phase B1 — Authoritative Family Registry and Membership Services, verified guardian/child identity and consent safeguards, domain-specific RBAC/ABAC, first authenticated frontend-to-backend integration, protected media and governed Kernel contracts.

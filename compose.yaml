@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: family_os
+      POSTGRES_USER: family_admin
+      POSTGRES_PASSWORD: ${PG_ADMIN_PASSWORD:?Set PG_ADMIN_PASSWORD in a private .env file}
+    ports:
+      - "127.0.0.1:${PG_PORT:-5432}:5432"
+    volumes:
+      - family_os_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U family_admin -d family_os"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+volumes:
+  family_os_db: {}
