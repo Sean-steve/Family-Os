@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   Activity, ArrowRight, Baby, Check, CheckCircle2,
   ChevronRight, Crown, Edit3, Heart, Home, Info, MapPin,
@@ -100,6 +100,19 @@ export default function FamilyWorkspace({ data, onChange, onToast, navigate }: P
   const [familyEdit, setFamilyEdit] = useState(false);
   const [familyName, setFamilyName] = useState(data.family.name);
   const [familyMotto, setFamilyMotto] = useState(data.family.motto);
+
+  useEffect(() => {
+    function dismissOverlay(e: KeyboardEvent) {
+      if (e.key !== "Escape") return;
+      setSelectedMemberId(null);
+      setEditingMemberId(null);
+      setEditingHouseholdId(null);
+      setRelationshipModal(false);
+      setFamilyEdit(false);
+    }
+    window.addEventListener("keydown", dismissOverlay);
+    return () => window.removeEventListener("keydown", dismissOverlay);
+  }, []);
 
   const family = data.family;
   const visibleMembers = useMemo(() => activeMembers(data.members, family), [data.members, family]);
