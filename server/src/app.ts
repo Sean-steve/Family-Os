@@ -71,7 +71,7 @@ export async function createApi(options:ApiOptions):Promise<FastifyInstance>{
         await db.query("INSERT INTO family.audit_events(family_id,actor_user_id,action,object_type,object_id) "+
           "VALUES($1,$2,'FAMILY_CREATED','FAMILY',$1)",[row.id,principal.actorId]);
         await db.query("INSERT INTO family.outbox(family_id,event_type,aggregate_id,payload) "+
-          "VALUES($1,'family.created.v1',$1,jsonb_build_object('familyId',$1::text,'createdBy',$2::text))",
+          "VALUES($1,'family.created.v1',$1,jsonb_build_object('familyId',($1::uuid)::text,'createdBy',($2::uuid)::text))",
           [row.id,principal.actorId]);
         return presentFamily(row);
       });
