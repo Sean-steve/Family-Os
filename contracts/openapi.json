@@ -353,6 +353,68 @@
             }
           }
         }
+      },
+      "patch": {
+        "tags": [
+          "families"
+        ],
+        "operationId": "renameMyFamily",
+        "summary": "Only active OWNER may change verified family name; audit and outbox transactional",
+        "security": [
+          {
+            "OidcBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "familyId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FamilyInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Family renamed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Family"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Invalid token"
+          },
+          "403": {
+            "description": "Role forbidden"
+          },
+          "404": {
+            "description": "Family not visible"
+          }
+        }
       }
     },
     "/api/v1/families/{familyId}/households": {
