@@ -3,7 +3,7 @@ import type { FormEvent } from "react";
 import {
   Activity, ArrowLeft, ArrowRight, Bell, BookHeart, CalendarDays,
   Check, CheckCircle2, ChevronDown, ChevronRight, Circle, ClipboardCheck,
-  Clock3, Command, Compass, Heart, HeartHandshake, Home, Info, Lightbulb,
+  Clock3, Compass, Heart, HeartHandshake, Home, Info, Lightbulb,
   ListTodo, Menu, MessageSquareText, Moon, Plus, Search, Settings2, ShieldCheck,
   Sun, Target, TreePine, TriangleAlert, UserRound,
   UsersRound, X, type LucideIcon
