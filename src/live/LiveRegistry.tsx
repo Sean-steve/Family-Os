@@ -36,6 +36,7 @@ export default function LiveRegistry({navigate}:Props){
   const [message,setMessage]=useState("");
   const [error,setError]=useState(liveCallbackError());
   const [familyName,setFamilyName]=useState("");
+  const [newFamilyName,setNewFamilyName]=useState("");
   const [houseName,setHouseName]=useState("");
   const [houseKind,setHouseKind]=useState<(typeof kinds)[number]>("OTHER");
   const [editing,setEditing]=useState<{id:string;name:string;kind:(typeof kinds)[number]}|null>(null);
@@ -66,6 +67,7 @@ export default function LiveRegistry({navigate}:Props){
     })();
     return ()=>{active=false;};
   },[]);
+  useEffect(()=>{setNewFamilyName(selected?.name||"");},[selected?.id,selected?.name]);
   useEffect(()=>{
     if(!user||!selectedId){setHouseholds([]);setMembers([]);return;}
     const family=families.find(f=>f.id===selectedId);
@@ -102,6 +104,11 @@ export default function LiveRegistry({navigate}:Props){
     const family=await liveRequest<FamilyResult>(user,"/api/v1/families","POST",{name:familyName.trim()});
     setFamilyName("");await refreshFamilies(user);setSelectedId(family.data.id);
     setMessage("Family created in PostgreSQL, with your verified OWNER membership.");
+  });};
+  const renameFamily=(e:FormEvent)=>{e.preventDefault();if(!user||!selected)return;void run(async()=>{
+    await liveRequest<FamilyResult>(user,"/api/v1/families/"+selected.id,"PATCH",
+      {name:newFamilyName.trim()});
+    await refreshFamilies(user);setMessage("Verified family name updated and audited.");
   });};
   const createHousehold=(e:FormEvent)=>{e.preventDefault();if(!user||!selected)return;void run(async()=>{
     await liveRequest<HouseholdResult>(user,"/api/v1/families/"+selected.id+"/households",
@@ -200,6 +207,14 @@ export default function LiveRegistry({navigate}:Props){
               <small>{f.role} · {f.id}</small></span><ChevronRight size={18}/></button>):
               <p className="lr-muted">No server-authoritative families yet. Create one or accept an adult invitation.</p>}
           </section>
+          {selected?.role==="OWNER"&&<section className="lr-panel"><h2><ShieldCheck size={19}/> Update authoritative family</h2>
+            <p className="lr-muted">Only a verified OWNER can change the registered family name. This does not rewrite the fictional Family preview.</p>
+            <form className="lr-form" onSubmit={renameFamily}><label>Verified family name
+              <input aria-label="Rename family" minLength={2} maxLength={120} required
+                value={newFamilyName} onChange={e=>setNewFamilyName(e.target.value)}/></label>
+              <button className="lr-btn primary" disabled={busy||newFamilyName.trim()===selected.name}>
+                <ShieldCheck size={15}/> Save family name</button></form>
+          </section>}
           <section className="lr-panel"><h2><Plus size={19}/> Start a family registry</h2>
             <p className="lr-muted">Creating a new family records your verified subject as its first OWNER. No fictional history is copied.</p>
             <form className="lr-form" onSubmit={createFamily}><label>Family name
