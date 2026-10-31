@@ -30,9 +30,9 @@ export const seed: AppData = {
     { id: "t4", title: "Clean bedrooms", person: "Sam, Ella", due: "Tomorrow", done: false }
   ],
   goals: [
-    { id: "g1", title: "Europe Family Trip", meta: "Family adventure", progress: 75, image: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=170&h=170&fit=crop", color: "green" },
-    { id: "g2", title: "Build Emergency Fund", meta: "Family security", progress: 40, image: "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=170&h=170&fit=crop", color: "blue" },
-    { id: "g3", title: "Healthier Habits", meta: "Family wellness", progress: 60, image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=170&h=170&fit=crop", color: "green" }
+    { id: "g1", title: "Europe Family Trip", meta: "Family adventure", progress: 75, objectiveId: "objective-trip", status: "ACTIVE", ownerIds: ["alex","jamie"], history: [], image: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=170&h=170&fit=crop", color: "green" },
+    { id: "g2", title: "Build Emergency Fund", meta: "Family security", progress: 40, objectiveId: "objective-reserve", status: "ACTIVE", ownerIds: ["alex","jamie"], history: [], image: "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=170&h=170&fit=crop", color: "blue" },
+    { id: "g3", title: "Healthier Habits", meta: "Family wellness", progress: 60, objectiveId: "objective-habits", status: "ACTIVE", ownerIds: ["alex","jamie"], history: [], image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=170&h=170&fit=crop", color: "green" }
   ],
   events: [
     { id: "e1", time: "7:00 AM", title: "Morning routine", note: "Kids", attendees: ["sam", "ella", "noah"], color: "#b6dc62", done: true },
