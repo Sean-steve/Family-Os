@@ -197,3 +197,25 @@ export function assignHousehold(households: Household[], householdId: string, me
 export function setPrimaryHousehold(households: Household[], id: string): Household[] {
   return households.map(h => ({ ...h, isPrimary: h.status === "ACTIVE" && h.id === id }));
 }
+
+/** Builds depth-aware family tree rows from recorded parent links.
+ * Other relationships remain in their own graph/list: partner status is not lineage.
+ */
+export function buildFamilyTreeLayers(members: MemberRef[], relationships: FamilyRelationship[]) {
+  const allowed = new Set(members.map(m => m.id));
+  const edges = relationships.filter(r => r.status === "ACTIVE" && r.type === "PARENT_OF" &&
+    allowed.has(r.fromId) && allowed.has(r.toId));
+  const referencedChildren = new Set(edges.map(r => r.toId));
+  const roots = members.filter(m => edges.some(e => e.fromId === m.id) && !referencedChildren.has(m.id));
+  const seen = new Set<string>();
+  const layers: string[][] = [];
+  let frontier = roots.map(m => m.id);
+  for (let depth = 0; frontier.length && depth < members.length; depth++) {
+    const current = [...new Set(frontier)].filter(id => !seen.has(id));
+    if (!current.length) break;
+    layers.push(current);
+    current.forEach(id => seen.add(id));
+    frontier = edges.filter(e => current.includes(e.fromId)).map(e => e.toId);
+  }
+  return { layers, unlinked: members.filter(m => !seen.has(m.id)).map(m => m.id) };
+}
