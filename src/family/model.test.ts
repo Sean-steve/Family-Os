@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  activeMembers, assignHousehold, canArchiveMember, migrateFamilyData,
+  activeMembers, assignHousehold, buildFamilyTreeLayers, canArchiveMember, migrateFamilyData,
   profileFor, seedFamily, setPrimaryHousehold, validateRelationship
 } from "./model";
 import type { FamilyRelationship, MemberRef } from "./model";
@@ -58,6 +58,15 @@ describe("Phase 2 family model", () => {
     const next = setPrimaryHousehold(homes, "other");
     expect(next.filter(h => h.isPrimary)).toHaveLength(1);
     expect(next.find(h => h.isPrimary)?.id).toBe("other");
+  });
+  it("renders multi-generation ancestry at the correct depth", () => {
+    const edges: FamilyRelationship[] = [
+      { id:"1", fromId:"alex", toId:"sam", type:"PARENT_OF", status:"ACTIVE", note:"" },
+      { id:"2", fromId:"sam", toId:"ella", type:"PARENT_OF", status:"ACTIVE", note:"" }
+    ];
+    const tree = buildFamilyTreeLayers(members, edges);
+    expect(tree.layers).toEqual([["alex"], ["sam"], ["ella"]]);
+    expect(tree.unlinked).toEqual(["jamie", "noah"]);
   });
   it("creates a safe editable profile for a Phase 1 added member", () => {
     const next = profileFor("new", "Caregiver");
