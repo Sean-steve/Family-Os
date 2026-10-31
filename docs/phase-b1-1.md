@@ -12,7 +12,7 @@ Phase B1.1 builds a staging-capable identity and API deployment, provider trust 
 - Keycloak 26.8.1 provides a staging OIDC realm called family-os-staging. No accounts, passwords or access tokens are committed. Public SPA client family-os-spa permits only the exact GitHub Pages callback and uses mandatory S256 PKCE. Access tokens must include the family-os-api audience. The realm disables public registration and password grants, uses short access-token lifespan, password policy, brute-force controls and TOTP enrollment.
 - Caddy 2.11.7 provides automatic TLS, HSTS, a hidden readiness endpoint and identity administrator CIDR protection. Only 80/443 are published on the host.
 - Fastify API is compiled into a minimal production Node container running as non-root and using a runtime-only DB account. The API performs signed OIDC JWT verification and OIDC provider metadata/JWKS trust attestation before starting.
-- Two separately provisioned PostgreSQL databases are required: one for Family OS (migration admin + family_runtime accounts, forced RLS) and one for Keycloak (separate database account). These must use managed TLS, private ingress and independent backups.
+- Two separately provisioned PostgreSQL databases are required: one for Family OS (migration admin + family_runtime accounts, forced RLS) and one for Keycloak (separate database account). These must use managed TLS with server certificate identity validation (verify-full for both Family and Keycloak databases), private ingress and independent backups.
 - Database migrations are executed by a short-lived, explicit administrator-only job, not by the API process or normal container startup.
 
 ## Provider validation
