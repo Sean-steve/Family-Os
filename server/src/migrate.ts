@@ -13,7 +13,7 @@ export async function migrate(adminUrl:string,runtimeUrl:string):Promise<void>{
     const role=await db.query("SELECT 1 FROM pg_roles WHERE rolname='family_runtime'");
     if(role.rowCount===0){
       const format=await db.query<{statement:string}>(
-        "SELECT format('CREATE ROLE family_runtime LOGIN PASSWORD %L', $1) AS statement",
+        "SELECT format('CREATE ROLE family_runtime LOGIN PASSWORD %L', $1::text) AS statement",
         [decodeURIComponent(runtime.password)]);
       await db.query(format.rows[0].statement);
     }
