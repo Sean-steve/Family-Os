@@ -17,6 +17,7 @@ import GovernanceWorkspace from "./governance/GovernanceWorkspace";
 import FamilyLifeWorkspace from "./life/FamilyLifeWorkspace";
 import IntelligenceWorkspace from "./intelligence/IntelligenceWorkspace";
 import GlobalSearch from "./search/GlobalSearch";
+import SettingsWorkspace from "./settings/SettingsWorkspace";
 import {type SearchEntry,routeFromSearch} from "./search/model";
 import { deriveSignals, evidenceCoverage, isDismissed, migrateIntelligence } from "./intelligence/model";
 import { normalizeLife } from "./life/model";
@@ -139,6 +140,12 @@ export default function App() {
     setRoute(next); setMenuOpen(false); setSearchOpen(false); setNotificationsOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+  const resetSampleData = () => {
+    const restored=structuredClone(seed);
+    setData(restored);setSearchTarget(null);setSampleVisible(true);
+    try{window.localStorage.setItem(STORE_KEY,JSON.stringify(restored));}catch{/* storage may be unavailable */}
+    navigate("Dashboard");setToast("Fictional sample data restored. Previous browser edits replaced.");
+  };
   const chooseSearch = (entry: SearchEntry) => {
     setSearchTarget(entry.kind==="SHARED_RECORD"?entry:null);
     navigate(routeFromSearch(entry),true);
@@ -228,7 +235,7 @@ export default function App() {
     <div className="main-area" id="family-main" tabIndex={-1}>
       <header className="topbar">
         <button className="hamburger" aria-label="Open navigation" onClick={() => setMenuOpen(true)}><Menu size={22} /></button>
-        <button className="top-search" onClick={() => setSearchOpen(true)}><Search size={20} /><span>Search family, events, goals, memories...</span><kbd>⌘ K</kbd></button>
+        <button className="top-search" onClick={() => setSearchOpen(true)}><Search size={20} /><span>Search workspaces, shared goals, tasks and events...</span><kbd>⌘ K</kbd></button>
         <div className="topbar-right">
           <div className="family-switch-wrap">
             <button className="family-switch" onClick={() => setFamilyOpen(!familyOpen)} aria-expanded={familyOpen}>
@@ -378,10 +385,14 @@ export default function App() {
       <FamilyLifeWorkspace route={route} data={data} onChange={setData} onToast={setToast} navigate={navigate} /> :
       route === "Insights" ? <IntelligenceWorkspace data={data} onChange={setData} onToast={setToast} navigate={navigate} /> :
       route === "Search" ? <GlobalSearch data={data} onSelect={chooseSearch} /> :
+      route === "Settings" ? <SettingsWorkspace data={data} dark={dark} onTheme={setDark}
+        onReset={resetSampleData} navigate={navigate} /> :
       <main className="phase-page">
         <button className="back-link" onClick={() => navigate("Dashboard")}><ArrowLeft size={17}/> Back to dashboard</button>
         <div className="phase-hero"><span className="phase-tag">Planned for Phase {phase}</span><span className="phase-icon"><Compass size={31}/></span><h1>{route}</h1><p>{navigationDescriptions[route] || "A dedicated Family OS workspace is planned for an upcoming development phase."}</p><div className="phase-actions"><button className="primary-button" onClick={() => navigate("Dashboard")}>Return to Family Command Center <ArrowRight size={17}/></button><button className="secondary-button" onClick={() => setSearchOpen(true)}><Search size={17}/> Search preview</button></div></div>
-        <div className="phase-note"><ShieldCheck size={23}/><div><strong>Intentional Phase 1 boundary</strong><p>This screen is not represented as finished. The application shell and dashboard are implemented now; this module will become interactive in its designated phase, using the same visual system.</p></div></div>
+        <div className="phase-note"><ShieldCheck size={23}/><div><strong>Not implemented in this frontend preview</strong>
+          <p>This module requires authenticated identities, verified permissions or messaging infrastructure before it can safely serve a real family.
+            No private data, messaging or account access is available here.</p></div></div>
       </main>}
     </div>
 
