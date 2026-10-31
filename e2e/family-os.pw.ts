@@ -43,7 +43,7 @@ test("Ctrl-K searches family goals and opens their owning tab, not a generic pla
   await dialog.getByRole("option",{name:/Europe Family Trip/}).click();
   await expect(page).toHaveURL(/#\/Goals$/);
   await expect(page.locator(".st-tabs .selected")).toContainText("Goals");
-  await expect(page.locator(".st-filters input")).toHaveValue("Europe Family Trip");
+  await expect(page.getByPlaceholder("Search family goals")).toHaveValue("Europe Family Trip");
 });
 
 test("universal search hands an explicitly shared task to its source filter and date",async({page})=>{
