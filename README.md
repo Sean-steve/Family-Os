@@ -1,30 +1,44 @@
 # Family OS
 
-Family OS is a privacy-first family coordination and intelligence workspace within the Human Kernel ecosystem.
+Family OS is a family coordination and planning frontend prototype intended for eventual integration into HumanKernelOS. **This repository currently has no backend, authentication, enforced privacy, protected family media, or live cross-OS integrations.**
 
-This repository contains the **frontend-only** prototype. No backend, authentication service, or live cross-OS integrations are configured.
+## Frontend scope — Phases 1–8
 
-## Phase 1
+The interactive premium UI includes the Family Dashboard, Members & Households, Plan, Calendar, Responsibilities, Routines, Family Vision & Goals, Decisions, Experiences, Memory Timeline, Traditions, Legacy, Family Intelligence & Insights, universal Search, and browser-local Settings. Some high-impact features such as private Personal Mode and Messages remain **unimplemented pending real identity and permissions**.
 
-Foundation, design system and dashboard reconstruction. Interactive demo data is stored locally in the browser. Later phases build the remaining family workflows.
+**All seeded family details are fictional.** Browser `localStorage` is unencrypted and unsuitable for personal or child data. Do not enter real sensitive information in the public preview.
 
-## Development
+Read the detailed implementation and limitations at `docs/phase-8.md`.
+
+## Development and release gates
 
 ```bash
-npm install
+npm install --no-audit --no-fund
 npm run dev
+npm run typecheck
+npm run test
 npm run build
+npx playwright install chromium
+npm run test:e2e
 ```
 
-The Vite base path is set for GitHub Pages at `/Family-Os/`.
+The end-to-end suite runs the built frontend using Playwright Chromium. The PR workflow also installs system dependencies and exports browser test artifacts. Search and command center tests include automated serious/critical WCAG semantic checks, with contrast and wider assistive-technology coverage **not yet certified**.
 
-## GitHub Pages activation
+## Search & privacy behavior
 
-GitHub Actions successfully builds this frontend, but **GitHub Pages has not been enabled for this repository**. The connected GitHub App and the workflow `GITHUB_TOKEN` cannot create the Pages site (`Resource not accessible by integration`). The repository owner must complete the one-time UI step:
+Ctrl/⌘ + K opens a modal search. The full Search workspace is also available from navigation. Search indexes route names and explicitly shared family tasks, dated shared events, and non-archived goals. Private memories, family decisions, personal profiles and legacy stories are deliberately excluded. **This is only a data-indexing restriction, not authenticated access control.**
 
-1. Open **Settings → Pages** in the `Sean-steve/Family-Os` repository.
-2. Under **Build and deployment**, set **Source** to **GitHub Actions**.
-3. Open **Actions → Build and deploy Family OS to GitHub Pages → Run workflow** (branch `main`).
-4. Once the workflow succeeds, visit `https://sean-steve.github.io/Family-Os/`.
+## GitHub Pages
 
-No backend is installed. Family preview data is fictional and saved in browser localStorage only.
+The Vite site base is `/Family-Os/`. The connected app cannot create the repository's Pages site; this requires a one-time owner action:
+
+1. Open `https://github.com/Sean-steve/Family-Os/settings/pages`.
+2. Select **Build and deployment → Source → GitHub Actions**.
+3. Rerun `Build and deploy Family OS to GitHub Pages` on `main`.
+4. Confirm deployment succeeded before using `https://sean-steve.github.io/Family-Os/`.
+
+A green build and merged code do **not** mean that GitHub Pages was published.
+
+## Next direction
+
+Phase B0 — Authenticated Family OS backend, verified identity, child/guardian and consent safeguards, PostgreSQL contracts, authoritative event boundaries, protected media, durable audits and Kernel integration.

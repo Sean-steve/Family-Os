@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import {
   Activity, ArrowLeft, ArrowRight, Bell, BookHeart, CalendarDays,
   Check, CheckCircle2, ChevronDown, ChevronRight, Circle, ClipboardCheck,
-  Clock3, Command, Compass, Heart, HeartHandshake, Home, Info, Lightbulb,
+  Clock3, Compass, Heart, HeartHandshake, Home, Info, Lightbulb,
   ListTodo, Menu, MessageSquareText, Moon, Plus, Search, Settings2, ShieldCheck,
-  Sparkles, Sun, Target, TreePine, TrendingUp, TriangleAlert, UserRound,
+  Sun, Target, TreePine, TriangleAlert, UserRound,
   UsersRound, X, type LucideIcon
 } from "lucide-react";
 import { seed, navItems, navigationDescriptions } from "./data";
@@ -16,7 +16,10 @@ import StrategyWorkspace from "./strategy/StrategyWorkspace";
 import GovernanceWorkspace from "./governance/GovernanceWorkspace";
 import FamilyLifeWorkspace from "./life/FamilyLifeWorkspace";
 import IntelligenceWorkspace from "./intelligence/IntelligenceWorkspace";
-import { deriveSignals, migrateIntelligence } from "./intelligence/model";
+import GlobalSearch from "./search/GlobalSearch";
+import SettingsWorkspace from "./settings/SettingsWorkspace";
+import {type SearchEntry,routeFromSearch} from "./search/model";
+import { deriveSignals, evidenceCoverage, isDismissed, migrateIntelligence } from "./intelligence/model";
 import { normalizeLife } from "./life/model";
 import { normalizeGovernance, decisionNeedsInput } from "./governance/model";
 import { migrateStrategy, normalizedGoals, recordGoalProgress } from "./strategy/model";
@@ -49,13 +52,10 @@ function readPreview(): AppData {
   return seed;
 }
 function id() { return "local-" + Date.now() + "-" + Math.floor(Math.random() * 9999); }
-function avatarUrl(number: number) { return "https://i.pravatar.cc/120?img=" + number; }
 function Avatar({ member, small = false }: { member: Member; small?: boolean }) {
-  const [failed, setFailed] = useState(false);
   return <span className={"avatar " + (small ? "avatar-small" : "")}
     style={{ backgroundColor: member.color }} title={member.name} aria-label={member.name}>
-    {!failed && <img loading="lazy" src={avatarUrl(member.avatar)} alt="" onError={() => setFailed(true)} />}
-    <span className="avatar-fallback">{member.name.slice(0, 1)}</span>
+    <span className="avatar-fallback">{member.name.slice(0, 1).toUpperCase()}</span>
   </span>;
 }
 function MemberStack({ ids, members }: { ids: string[]; members: Member[] }) {
@@ -99,7 +99,7 @@ export default function App() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [familyOpen, setFamilyOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchTarget, setSearchTarget] = useState<SearchEntry | null>(null);
   const [addKind, setAddKind] = useState<"Task" | "Goal" | "Event" | "Member" | null>(null);
   const [draftTitle, setDraftTitle] = useState("");
   const [draftExtra, setDraftExtra] = useState("");
@@ -108,7 +108,6 @@ export default function App() {
   const [operationsAction, setOperationsAction] = useState<"Task" | "Event" | null>(null);
   const [strategyAction, setStrategyAction] = useState<"Goal" | null>(null);
   const [sampleVisible, setSampleVisible] = useState(true);
-  const searchInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     try { window.localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch { /* storage unavailable */ }
@@ -129,17 +128,27 @@ export default function App() {
     window.addEventListener("keydown", keyboard);
     return () => { window.removeEventListener("hashchange", hashChanged); window.removeEventListener("keydown", keyboard); };
   }, []);
-  useEffect(() => { if (searchOpen) searchInput.current?.focus(); }, [searchOpen]);
   useEffect(() => {
     if (!toast) return;
     const handle = window.setTimeout(() => setToast(""), 3200);
     return () => window.clearTimeout(handle);
   }, [toast]);
 
-  const navigate = (next: string) => {
+  const navigate = (next: string, fromSearch = false) => {
+    if (!fromSearch) setSearchTarget(null);
     window.location.hash = "#/" + encodeURIComponent(next);
     setRoute(next); setMenuOpen(false); setSearchOpen(false); setNotificationsOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const resetSampleData = () => {
+    const restored=structuredClone(seed);
+    setData(restored);setSearchTarget(null);setSampleVisible(true);
+    try{window.localStorage.setItem(STORE_KEY,JSON.stringify(restored));}catch{/* storage may be unavailable */}
+    navigate("Dashboard");setToast("Fictional sample data restored. Previous browser edits replaced.");
+  };
+  const chooseSearch = (entry: SearchEntry) => {
+    setSearchTarget(entry.kind==="SHARED_RECORD"?entry:null);
+    navigate(routeFromSearch(entry),true);
   };
   const openAdd = (kind: "Task" | "Goal" | "Event" | "Member") => {
     if (kind === "Task" || kind === "Event") {
@@ -177,37 +186,30 @@ export default function App() {
     ...prev, events: prev.events.map(e => e.id === eventId ? { ...e, done: !e.done } : e)
   }));
   const showDetails = (title: string, body: string, kind: string) => setDetails({ title, body, kind });
-  const searchItems = [
-    ...navItems.map(n => ({ title: n.label, sub: "Navigate · Phase " + n.phase, page: n.label })),
-    ...data.goals.map(g => ({ title: g.title, sub: "Family goal · " + g.progress + "% complete", page: "Goals" })),
-    ...data.tasks.map(t => ({ title: t.title, sub: "Responsibility · " + t.person, page: "Responsibilities" })),
-    ...data.events.filter(e => e.status !== "CANCELLED").map(e => ({ title: e.title, sub: "Family calendar · " + (e.date || "Today"), page: "Calendar" })),
-    ...data.operations.routines.map(r => ({ title: r.name, sub: "Family routine", page: "Routines" })),
-    ...data.life.experiences.map(x => ({ title: x.title, sub: "Family experience", page: "Experiences" })),
-    ...data.life.memories.map(x => ({ title: x.title, sub: "Memory timeline", page: "Memory" })),
-    ...data.life.traditions.map(x => ({ title: x.title, sub: "Family tradition", page: "Traditions" })),
-    ...data.life.legacy.map(x => ({ title: x.title, sub: "Family legacy", page: "Legacy" }))
-  ].filter(item => (item.title + " " + item.sub).toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 9);
   const familyMembers = activeMembers(data.members, data.family);
-  const dashboardEvents = eventsOnDate(data.events, dateKey());
+  const dashboardEvents = eventsOnDate(data.events.filter(e=>Boolean(e.date)&&
+    (e.category==="FAMILY"||e.category==="HOME")), dateKey());
   const upcomingLocalEvents = eventsBetween(data.events, shiftDate(dateKey(),1), shiftDate(dateKey(),7))
-    .filter(event => Boolean(event.date)).slice(0,3);
-  const dashboardTasks = tasksOnDate(data.tasks, dateKey());
+    .filter(event => Boolean(event.date)&&(event.category==="FAMILY"||event.category==="HOME")).slice(0,5);
+  const dashboardTasks = tasksOnDate(data.tasks.filter(t=>Boolean(t.dueDate)&&
+    (t.category==="FAMILY"||t.category==="HOME")), dateKey());
   const done = dashboardTasks.filter(t => taskDoneOn(t,dateKey())).length;
   const percent = dashboardTasks.length ? Math.round(done / dashboardTasks.length * 100) : 0;
-  const intelligenceSignals = deriveSignals(data,dateKey());
+  const intelligenceSignals = deriveSignals(data,dateKey()).filter(signal=>!isDismissed(signal,data.intelligence));
+  const coverage = evidenceCoverage(data);
   const evidenceAttention = intelligenceSignals.filter(signal=>signal.tone==="ATTENTION");
   const phase = navItems.find(item => item.label === route)?.phase || (route === "Personal Mode" ? 8 : 8);
 
   return <div className="app-shell">
+    <a href="#family-main" className="skip-content">Skip to main content</a>
     {menuOpen && <button className="mobile-overlay" aria-label="Close menu" onClick={() => setMenuOpen(false)} />}
     <aside className={"sidebar " + (menuOpen ? "sidebar-open" : "")}>
       <div className="brand"><span className="brand-logo"><span /><span /><span /></span><span>Family OS</span><button className="mobile-sidebar-close" aria-label="Close sidebar" onClick={() => setMenuOpen(false)}><X size={20} /></button></div>
       <nav aria-label="Main navigation" className="side-nav">
         {navItems.map(item => {
           const Icon = icons[item.icon];
-          return <button key={item.label} onClick={() => item.label === "Search" ? setSearchOpen(true) : navigate(item.label)}
-            className={"nav-item " + (route === item.label ? "active" : "")}>
+          return <button key={item.label} onClick={() => navigate(item.label)}
+            className={"nav-item " + (route === item.label ? "active" : "")} aria-current={route===item.label?"page":undefined}>
             <Icon size={19} strokeWidth={1.8} /><span>{item.label}</span></button>;
         })}
       </nav>
@@ -219,39 +221,41 @@ export default function App() {
       <div className="sidebar-spacer" />
       <div className="side-separator" />
       <div className="lower-nav">
-        <button className="nav-item" onClick={() => setNotificationsOpen(true)}><Bell size={19} /><span>Notifications</span>{!data.notificationsSeen && <b className="red-dot">3</b>}</button>
+        <button className="nav-item" onClick={() => setNotificationsOpen(true)}><Bell size={19} /><span>Notifications</span></button>
         <button className="nav-item" onClick={() => navigate("Messages")}><MessageSquareText size={19} /><span>Messages</span></button>
         <button className="nav-item" onClick={() => navigate("Settings")}><Settings2 size={19} /><span>Settings</span></button>
       </div>
       <div className="sidebar-profile">
-        <Avatar member={data.members[0] || seed.members[0]} />
-        <span><strong>{data.members[0]?.name || "Alex"} Taylor</strong><small>Family Owner</small></span>
+        {data.members[0]&&<Avatar member={data.members[0]}/>}
+        <span><strong>{data.members[0]?.name||data.family.name}</strong><small>Local prototype · Not signed in</small></span>
         <ChevronDown size={14} />
       </div>
     </aside>
 
-    <div className="main-area">
+    <div className="main-area" id="family-main" tabIndex={-1}>
       <header className="topbar">
         <button className="hamburger" aria-label="Open navigation" onClick={() => setMenuOpen(true)}><Menu size={22} /></button>
-        <button className="top-search" onClick={() => setSearchOpen(true)}><Search size={20} /><span>Search family, events, goals, memories...</span><kbd>⌘ K</kbd></button>
+        <button className="top-search" onClick={() => setSearchOpen(true)}><Search size={20} /><span>Search workspaces, shared goals, tasks and events...</span><kbd>⌘ K</kbd></button>
         <div className="topbar-right">
           <div className="family-switch-wrap">
             <button className="family-switch" onClick={() => setFamilyOpen(!familyOpen)} aria-expanded={familyOpen}>
               <MemberStack ids={["alex","jamie"]} members={data.members} /><strong>{data.family.name}</strong><ChevronDown size={16} />
             </button>
-            {familyOpen && <div className="popover family-popover"><b>Family workspace</b><p>{data.family.name} · Local preview</p><button onClick={() => {setFamilyOpen(false);showDetails("Family switching","Multi-family switching will arrive with Family Profiles in Phase 2. This preview contains one local family workspace.","Phase 2");}}>Manage family workspaces <ArrowRight size={14}/></button></div>}
+            {familyOpen && <div className="popover family-popover"><b>Family workspace</b><p>{data.family.name} · Local preview</p><button onClick={() => {setFamilyOpen(false);showDetails("Family switching","This prototype contains one browser-local family. Multi-family switching requires authenticated isolation, consent and a backend and is not implemented.","Not available");}}>Manage family workspaces <ArrowRight size={14}/></button></div>}
           </div>
-          <button className="top-icon" aria-label="Notifications" onClick={() => setNotificationsOpen(s => !s)}><Bell size={20} />{!data.notificationsSeen && <span className="top-count">3</span>}</button>
+          <button className="top-icon" aria-label="Notifications" onClick={() => setNotificationsOpen(s => !s)}><Bell size={20} /></button>
           <button className="top-icon" aria-label={dark ? "Switch to light theme" : "Switch to dark theme"} onClick={() => setDark(s => !s)}>{dark ? <Moon size={20} /> : <Sun size={21} />}</button>
         </div>
       </header>
-      {notificationsOpen && <div className="notifications-popover popover">
-        <div className="popover-heading"><strong>Notifications</strong><button onClick={() => setNotificationsOpen(false)} aria-label="Close notifications"><X size={16} /></button></div>
-        <p className="popover-muted">Illustrative family updates</p>
-        <div className="notification-item"><span className="notice-emoji red">!</span><span><b>Decision needs your input</b><small>Summer holiday destination</small></span></div>
-        <div className="notification-item"><span className="notice-emoji amber">!</span><span><b>School permission form</b><small>Due today</small></span></div>
-        <div className="notification-item"><span className="notice-emoji green">✓</span><span><b>Goal progress</b><small>Europe trip is 75% complete</small></span></div>
-        <button className="popover-button" onClick={() => {setData(prev => ({...prev,notificationsSeen:true}));setNotificationsOpen(false);setToast("Notifications marked as read");}}>Mark all as read <Check size={15} /></button>
+      {notificationsOpen && <div className="notifications-popover popover" role="region" aria-label="Family observations">
+        <div className="popover-heading"><strong>Recorded family observations</strong>
+          <button onClick={() => setNotificationsOpen(false)} aria-label="Close observations"><X size={16}/></button></div>
+        <p className="popover-muted">Current rule-based signals · Not push notifications or verified alerts</p>
+        {intelligenceSignals.slice(0,4).map(signal=><button key={signal.id} className="notification-item"
+          onClick={()=>navigate("Insights")}><span className="notice-emoji amber">!</span>
+          <span><b>{signal.title}</b><small>{signal.domain} · Review linked source evidence</small></span></button>)}
+        {!intelligenceSignals.length&&<p className="popover-muted">No supported observations right now. This does not mean the family has no needs.</p>}
+        <button className="popover-button" onClick={()=>navigate("Insights")}>Open Insights <ArrowRight size={15}/></button>
       </div>}
 
       {route === "Dashboard" ? <>
@@ -259,7 +263,7 @@ export default function App() {
           <section className="hero" aria-label="Family greeting">
             <div className="hero-shade" />
             <div className="hero-top">
-              <div><p className="hero-date">{todayText}</p><h1>{formatGreeting()}, {data.members[0]?.name || "Alex"}</h1><p className="hero-subtitle">A calm and connected family builds an extraordinary life.</p></div>
+              <div><p className="hero-date">{todayText}</p><h1>{formatGreeting()}, {data.members[0]?.name || "family"}</h1><p className="hero-subtitle">A calm and connected family builds an extraordinary life.</p></div>
               <div className="hero-weather"><Sun size={30} /><span>Family preview<br /><strong>Our shared space</strong></span></div>
             </div>
             <div className="hero-bottom">
@@ -273,7 +277,7 @@ export default function App() {
           <section className="metrics" aria-label="Family overview">
             <MetricCard title="Today" value={dashboardEvents.length} foot="events" icon={CalendarDays} tone="blue" onClick={() => navigate("Calendar")}/>
             <MetricCard title="Family Goals" value={data.goals.filter(g => g.status !== "ARCHIVED").length} foot="Tracked locally" icon={Target} tone="rose" onClick={() => openAdd("Goal")}/>
-            <MetricCard title="Responsibilities" value={dashboardTasks.length} foot={percent + "% completed"} icon={CheckCircle2} tone="green" onClick={() => openAdd("Task")}/>
+            <MetricCard title="Responsibilities" value={dashboardTasks.length} foot={dashboardTasks.length?percent+"% completed":"No dated shared tasks"} icon={CheckCircle2} tone="green" onClick={() => openAdd("Task")}/>
             <MetricCard title="Decisions" value={data.governance.decisions.filter(decisionNeedsInput).length} foot="need local input" icon={UsersRound} tone="purple" onClick={() => navigate("Decisions")}/>
             <MetricCard title="Data Connections" value="0" foot="external OS connected" icon={Heart} tone="blue" onClick={() => navigate("Insights")}/>
             <MetricCard title="Evidence Alerts" value={evidenceAttention.length} foot="dated items to review" icon={TriangleAlert} tone="orange" onClick={() => navigate("Insights")}/>
@@ -319,12 +323,9 @@ export default function App() {
                   <time>{dateLabel(eventDate(event))}</time><IconBox icon={CalendarDays} tint="blue"/><span>
                     <strong>{event.title}</strong><small>{clockDisplay(event.time)} · Added to family calendar</small>
                   </span></button>)}
-                {data.upcoming.map(item => {
-                  const Icon = item.icon === "heart" ? Heart : item.icon === "school" ? Sparkles : item.icon === "tree" ? TreePine : item.icon === "soccer" ? Target : ShieldCheck;
-                  return <button key={item.id} className="upcoming-row" onClick={() => showDetails(item.title,item.detail + " · " + item.when,"Upcoming event")}>
-                    <time>{item.when}</time><IconBox icon={Icon} tint={item.tint} /><span><strong>{item.title}</strong><small>{item.detail}</small></span>
-                  </button>;
-                })}
+                {!upcomingLocalEvents.length&&<div className="dashboard-empty">
+                  No upcoming explicitly dated shared events. Open Calendar to plan one.
+                </div>}
               </div>
             </article>
           </section>
@@ -348,47 +349,59 @@ export default function App() {
             </article>
 
             <article className="panel health-panel">
-              <CardTitle action="View Details" onAction={() => showDetails("Family Health overview","All health and finance indicators shown on this screen are illustrative. No specialised system is connected in Phase 1.","Preview indicator")}>Family Health</CardTitle>
-              {[
-                { title: "Financial", note: "On track", color: "good" },
-                { title: "Health & Wellbeing", note: "Good", color: "good" },
-                { title: "Household", note: "Some items pending", color: "warn" },
-                { title: "Goal Progress", note: "Strong momentum", color: "good" },
-                { title: "Family Coordination", note: "Good", color: "good" }
-              ].map(item => <div className="health-row" key={item.title}><span className={"health-tick " + item.color}>{item.color === "good" ? <Check size={16}/> : <Plus size={15}/>}</span><span><strong>{item.title}</strong><small>{item.note}</small></span></div>)}
-              <p className="sample-disclaimer">Illustrative status · not a health assessment</p>
+              <CardTitle action="View Coverage" onAction={()=>navigate("Insights")}>Evidence & Connections</CardTitle>
+              {coverage.map(item=><div className="health-row" key={item.area}>
+                <span className="health-tick neutral"><Info size={16}/></span>
+                <span><strong>{item.area}</strong>
+                  <small>{item.status==="NOT_CONNECTED"?"Not connected":
+                    item.status==="INSUFFICIENT_DATA"?"Insufficient dated data":"Browser records only · Unverified"}</small></span>
+              </div>)}
+              <p className="sample-disclaimer">No connected Health OS, Finance OS or HumanKernelOS. No wellbeing or financial assessment.</p>
             </article>
 
             <article className="panel insights-panel">
-              <CardTitle action="View All" onAction={() => navigate("Insights")}>Family Insights</CardTitle>
-              <button className="insight-box positive-insight" onClick={() => showDetails("Routine consistency","This example illustrates future Family OS intelligence. It is not calculated from real historical records.","Illustrative insight")}><IconBox icon={TrendingUp} tint="green"/><span>Your family is <b>23% more consistent</b> with routines this month.</span><em>↑ 23%</em></button>
-              <button className="insight-box" onClick={() => showDetails("Best time for a family holiday","The future scenario engine will compare calendar availability, budget and other authorised family context. This card is a preview.","Illustrative insight")}><IconBox icon={Lightbulb} tint="purple"/><span><b>Best time for a family holiday</b><small>July shows the best combination of school holidays, weather and budget.</small></span><ChevronRight size={18}/></button>
-              <button className="insight-box" onClick={() => showDetails("Workload forecast","This is a design example. The later capacity engine will show evidence and confidence instead of fabricated forecasts.","Illustrative insight")}><IconBox icon={TriangleAlert} tint="rose"/><span><b>Increased workload next week</b><small>3 responsibilities overlapping with school events. Consider delegating.</small></span><ChevronRight size={18}/></button>
-              <div className="insight-footnote"><Sparkles size={13}/> AI intelligence is simulated in Phase 1</div>
+              <CardTitle action="Explore Evidence" onAction={()=>navigate("Insights")}>Family Insights</CardTitle>
+              {intelligenceSignals.slice(0,3).map(signal=><button className="insight-box" key={signal.id}
+                onClick={()=>navigate("Insights")}>
+                <IconBox icon={signal.tone==="ATTENTION"?TriangleAlert:signal.tone==="CELEBRATE"?Heart:Lightbulb}
+                  tint={signal.tone==="ATTENTION"?"rose":signal.tone==="CELEBRATE"?"green":"purple"}/>
+                <span><b>{signal.title}</b><small>{signal.domain} · {signal.evidence.length} supporting source record(s)</small></span>
+                <ChevronRight size={18}/></button>)}
+              {!intelligenceSignals.length&&<p className="dashboard-empty">No rule-matched dated signals.
+                Missing data is not evidence of family health or safety.</p>}
+              <div className="insight-footnote"><BookHeart size={13}/> Deterministic local insights · No AI predictions or private cross-OS data</div>
             </article>
           </section>
-          <footer className="dashboard-footer"><span>Family OS · Phase 1 frontend preview</span><span>No account or backend connection · Private to this browser</span></footer>
+          <footer className="dashboard-footer"><span>Family OS · Frontend prototype · Phases 1–8</span><span>LocalStorage is unencrypted; no accounts or secure private storage</span></footer>
         </main>
       </> : route === "Family" ? <FamilyWorkspace data={data} onChange={setData} onToast={setToast} navigate={navigate} /> :
       (route === "Plan" || route === "Calendar" || route === "Responsibilities" || route === "Routines") ?
       <OperationsWorkspace route={route} data={data} onChange={setData} onToast={setToast} navigate={navigate}
-        initialAction={operationsAction} onInitialActionConsumed={() => setOperationsAction(null)} /> :
+        searchFocus={searchTarget?.route===route?searchTarget:undefined} initialAction={operationsAction} onInitialActionConsumed={() => setOperationsAction(null)} /> :
       route === "Goals" ? <StrategyWorkspace data={data} onChange={setData} onToast={setToast} navigate={navigate}
-        initialAction={strategyAction} onInitialActionConsumed={() => setStrategyAction(null)} /> :
+        searchFocus={searchTarget?.route===route?searchTarget:undefined} initialAction={strategyAction} onInitialActionConsumed={() => setStrategyAction(null)} /> :
       route === "Decisions" ? <GovernanceWorkspace data={data} onChange={setData} onToast={setToast} navigate={navigate} /> :
       (route === "Experiences" || route === "Memory" || route === "Traditions" || route === "Legacy") ?
       <FamilyLifeWorkspace route={route} data={data} onChange={setData} onToast={setToast} navigate={navigate} /> :
       route === "Insights" ? <IntelligenceWorkspace data={data} onChange={setData} onToast={setToast} navigate={navigate} /> :
+      route === "Search" ? <GlobalSearch data={data} onSelect={chooseSearch} /> :
+      route === "Settings" ? <SettingsWorkspace data={data} dark={dark} onTheme={setDark}
+        onReset={resetSampleData} navigate={navigate} /> :
       <main className="phase-page">
         <button className="back-link" onClick={() => navigate("Dashboard")}><ArrowLeft size={17}/> Back to dashboard</button>
         <div className="phase-hero"><span className="phase-tag">Planned for Phase {phase}</span><span className="phase-icon"><Compass size={31}/></span><h1>{route}</h1><p>{navigationDescriptions[route] || "A dedicated Family OS workspace is planned for an upcoming development phase."}</p><div className="phase-actions"><button className="primary-button" onClick={() => navigate("Dashboard")}>Return to Family Command Center <ArrowRight size={17}/></button><button className="secondary-button" onClick={() => setSearchOpen(true)}><Search size={17}/> Search preview</button></div></div>
-        <div className="phase-note"><ShieldCheck size={23}/><div><strong>Intentional Phase 1 boundary</strong><p>This screen is not represented as finished. The application shell and dashboard are implemented now; this module will become interactive in its designated phase, using the same visual system.</p></div></div>
+        <div className="phase-note"><ShieldCheck size={23}/><div><strong>Not implemented in this frontend preview</strong>
+          <p>This module requires authenticated identities, verified permissions or messaging infrastructure before it can safely serve a real family.
+            No private data, messaging or account access is available here.</p></div></div>
       </main>}
     </div>
 
     <div className="quick-actions"><button className="quick-add" aria-label="Quick add" onClick={() => openAdd("Task")}><Plus size={25}/></button><button className="quick-label" onClick={() => openAdd("Task")}>Quick add</button></div>
 
-    {searchOpen && <div className="modal-backdrop" onClick={() => setSearchOpen(false)}><section className="search-dialog" role="dialog" aria-modal="true" aria-label="Search Family OS" onClick={e => e.stopPropagation()}><div className="search-dialog-input"><Search size={22}/><input ref={searchInput} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search family, goals, events, screens..." aria-label="Search"/><button onClick={() => setSearchOpen(false)}><X size={19}/></button></div><div className="search-results">{searchItems.length ? searchItems.map((item, index) => <button key={item.page + item.title + index} onClick={() => navigate(item.page)}><span className="search-result-icon"><ArrowRight size={16}/></span><span><b>{item.title}</b><small>{item.sub}</small></span><ChevronRight size={16}/></button>) : <p>No matching preview items.</p>}</div><div className="search-hint"><Command size={13}/> Press Ctrl/⌘ + K to open search · Esc to close</div></section></div>}
+    {searchOpen && <div className="modal-backdrop se-backdrop" onClick={() => setSearchOpen(false)}>
+      <div onClick={e=>e.stopPropagation()}><GlobalSearch mode="modal" data={data}
+        onSelect={chooseSearch} onClose={()=>setSearchOpen(false)}/></div>
+    </div>}
 
     {addKind && <div className="modal-backdrop" onClick={() => setAddKind(null)}><section className="action-dialog" role="dialog" aria-modal="true" aria-label={"Add " + addKind} onClick={e => e.stopPropagation()}><div className="dialog-heading"><div><span className="dialog-eyebrow">FAMILY OS · LOCAL PREVIEW</span><h2>Add {addKind === "Task" ? "responsibility" : addKind.toLowerCase()}</h2></div><button className="close-dialog" onClick={() => setAddKind(null)} aria-label="Close dialog"><X size={19}/></button></div>
       <div className="kind-tabs">{(["Task","Goal","Event","Member"] as const).map(kind => <button type="button" className={kind === addKind ? "selected" : ""} key={kind} onClick={() => openAdd(kind)}>{kind}</button>)}</div>

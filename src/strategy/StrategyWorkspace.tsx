@@ -1,6 +1,7 @@
 import {useEffect,useState,type FormEvent} from "react";
 import {ArrowRight,Award,BookOpen,CalendarDays,Check,CheckCircle2,ChevronRight,Compass,Edit3,Flag,Heart,Info,Plus,Rocket,Search,ShieldCheck,Sparkles,Sprout,Target,TrendingUp,UsersRound,X} from "lucide-react";
 import type {AppData,Goal,Member} from "../data";
+import type { SearchEntry } from "../search/model";
 import {activeMembers,freshId} from "../family/model";
 import {clampProgress,goalHistoryLabel,missionProgress,milestoneProgress,objectiveProgress,overallProgress,recordGoalProgress,strategyToday,validParent} from "./model";
 import type {FamilyValue,Mission,Milestone,Objective,StrategyReview,StrategyStatus} from "./model";
@@ -8,7 +9,7 @@ import "./strategy.css";
 
 type Tab="Overview"|"Vision & Values"|"Missions"|"Milestones"|"Objectives"|"Goals"|"Reviews";
 type Kind="Vision"|"Value"|"Mission"|"Milestone"|"Objective"|"Goal"|"Review"|"Progress";
-type Props={data:AppData;onChange:(fn:(p:AppData)=>AppData)=>void;onToast:(s:string)=>void;navigate:(s:string)=>void;initialAction?:"Goal"|null;onInitialActionConsumed?:()=>void};
+type Props={data:AppData;onChange:(fn:(p:AppData)=>AppData)=>void;onToast:(s:string)=>void;navigate:(s:string)=>void;initialAction?:"Goal"|null;onInitialActionConsumed?:()=>void;searchFocus?:SearchEntry};
 const tabs:Tab[]=["Overview","Vision & Values","Missions","Milestones","Objectives","Goals","Reviews"];
 const statuses:StrategyStatus[]=["DRAFT","ACTIVE","PAUSED","COMPLETED","ARCHIVED"];
 function Progress({value}:{value:number|null}){return <div className="st-track"><span style={{width:(value??0)+"%"}}/></div>}
@@ -21,7 +22,7 @@ function MemberChips({ids,members}:{ids:string[];members:Member[]}){return <div 
 })}</div>}
 function ValueIcon({symbol}:{symbol:string}){return symbol==="shield"?<ShieldCheck/>:symbol==="users"?<UsersRound/>:symbol==="sprout"?<Sprout/>:<Heart/>}
 function Field({label,children}:{label:string;children:React.ReactNode}){return <label className="st-field"><span>{label}</span>{children}</label>}
-export default function StrategyWorkspace({data,onChange,onToast,navigate,initialAction,onInitialActionConsumed}:Props){
+export default function StrategyWorkspace({data,onChange,onToast,navigate,initialAction,onInitialActionConsumed,searchFocus}:Props){
   const {strategy,goals}=data;
   const members=activeMembers(data.members,data.family);
   const [tab,setTab]=useState<Tab>("Overview");
@@ -35,6 +36,11 @@ export default function StrategyWorkspace({data,onChange,onToast,navigate,initia
   const [archived,setArchived]=useState(false);
   const [detail,setDetail]=useState<string|null>(null);
   const [expanded,setExpanded]=useState<string|null>(null);
+  useEffect(()=>{
+    if(searchFocus?.kind==="SHARED_RECORD"&&searchFocus.area==="Goals"){
+      setTab("Goals");setQuery(searchFocus.title);setFilter("ALL");setArchived(false);
+    }
+  },[searchFocus]);
   const mission=(id:string)=>strategy.missions.find(x=>x.id===id);
   const milestone=(id:string)=>strategy.milestones.find(x=>x.id===id);
   const objective=(id:string)=>strategy.objectives.find(x=>x.id===id);
