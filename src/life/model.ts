@@ -92,13 +92,13 @@ export const seedLife:FamilyLifeState={
     {id:"memory-picnic",title:"A sunny afternoon by the river",
       story:"We took some time away from the routine and enjoyed being outdoors together. The little moments were our favourite part.",
       date:"2026-10-04",experienceId:"exp-picnic",traditionId:"",memberIds:["alex","jamie","sam","ella","noah"],
-      tags:["Outdoors","Togetherness"],visibility:"REVIEW_FIRST",consent:"NOT_RECORDED",
+      tags:["Outdoors","Togetherness"],visibility:"REVIEW_FIRST",consent:"REVIEW_NEEDED",
       status:"RECORDED",createdAt:"2026-10-05",mediaCaption:"Sample photo placeholder — no actual family image stored",
       mediaKind:"PHOTO_PLACEHOLDER"},
     {id:"memory-laughs",title:"The game night that made us laugh",
       story:"A fun night of friendly competition, snacks and an unexpected comeback in the final game.",
       date:"2026-09-19",experienceId:"",traditionId:"trad-game",memberIds:["alex","jamie","sam"],
-      tags:["Traditions","Joy"],visibility:"FAMILY_LABEL",consent:"NOT_RECORDED",
+      tags:["Traditions","Joy"],visibility:"FAMILY_LABEL",consent:"REVIEW_NEEDED",
       status:"RECORDED",createdAt:"2026-09-20",mediaCaption:"",mediaKind:"NONE"}
   ],
   traditions:[
