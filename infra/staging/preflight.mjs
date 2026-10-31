@@ -31,7 +31,7 @@ if(!template){
     expect("DATABASE_ADMIN_URL TLS/role",admin.protocol==="postgresql:"&&decodeURIComponent(admin.username)!=="family_runtime"&&admin.password.length>=16&&admin.searchParams.get("sslmode")==="verify-full");
     expect("database scope",db.hostname===admin.hostname&&db.pathname===admin.pathname);
   }catch{failures.push("Invalid PostgreSQL URL");}
-  expect("Keycloak managed JDBC TLS",/^jdbc:postgresql:\/\/[^?#]+[?&]sslmode=(verify-full|require)(?:&|$)/.test(env.FAMILY_IDENTITY_JDBC_URL||""));
+  expect("Keycloak managed JDBC TLS",/^jdbc:postgresql:\/\/[^?#]+[?&]sslmode=verify-full(?:&|$)/.test(env.FAMILY_IDENTITY_JDBC_URL||""));
   expect("Keycloak bootstrap password",String(env.FAMILY_IDENTITY_ADMIN_PASSWORD||"").length>=24);
   expect("Keycloak database password",String(env.FAMILY_IDENTITY_DB_PASSWORD||"").length>=16);
 }
