@@ -1,8 +1,8 @@
 import {useEffect,useMemo,useState,type FormEvent} from "react";
 import {
   Album,Archive,ArrowRight,BookHeart,BookOpen,CalendarDays,Camera,Check,CheckCircle2,
-  ChevronRight,Clock3,Compass,Edit3,Flag,Gift,Heart,History,Image,Info,Leaf,MapPin,
-  Plus,Repeat2,Search,ShieldAlert,ShieldCheck,Sparkles,Star,TreePine,UsersRound,X
+  ChevronRight,Clock3,Compass,Edit3,Flag,Gift,Heart,History,Info,Leaf,MapPin,
+  Plus,Repeat2,Search,ShieldAlert,ShieldCheck,Sparkles,Star,TreePine,X
 } from "lucide-react";
 import type {AppData,Member} from "../data";
 import {activeMembers} from "../family/model";
@@ -82,6 +82,7 @@ export default function FamilyLifeWorkspace({route,data,onChange,onToast,navigat
   const [editId,setEditId]=useState<string|null>(null);
   const [expDraft,setExpDraft]=useState<Experience>(()=>blankExperience(""));
   const [memDraft,setMemDraft]=useState<Memory>(blankMemory);
+  const [tagsInput,setTagsInput]=useState("");
   const [tradDraft,setTradDraft]=useState<Tradition>(()=>blankTradition(""));
   const [legacyDraft,setLegacyDraft]=useState<LegacyRecord>(blankLegacy);
   const [detail,setDetail]=useState<{kind:"Memory"|"Legacy"|"Tradition";id:string}|null>(null);
@@ -113,8 +114,10 @@ export default function FamilyLifeWorkspace({route,data,onChange,onToast,navigat
     setError("");setEditor(kind);setEditId(id||null);setDetail(null);
     if(kind==="Experience")setExpDraft(structuredClone(template as Experience||
       life.experiences.find(e=>e.id===id)||blankExperience(mainHome)));
-    if(kind==="Memory")setMemDraft(structuredClone(template as Memory||
-      life.memories.find(m=>m.id===id)||blankMemory()));
+    if(kind==="Memory"){
+      const starting=structuredClone(template as Memory||life.memories.find(m=>m.id===id)||blankMemory());
+      setMemDraft(starting);setTagsInput(starting.tags.join(", "));
+    }
     if(kind==="Tradition")setTradDraft(structuredClone(template as Tradition||
       life.traditions.find(t=>t.id===id)||blankTradition(mainHome)));
     if(kind==="Legacy")setLegacyDraft(structuredClone(template as LegacyRecord||
@@ -135,10 +138,11 @@ export default function FamilyLifeWorkspace({route,data,onChange,onToast,navigat
         x.id===editId?{...expDraft,title:expDraft.title.trim(),summary:expDraft.summary.trim()}:x):
         [{...expDraft,title:expDraft.title.trim(),summary:expDraft.summary.trim()},...prev.experiences]}));
     }else if(editor==="Memory"){
-      problem=validateMemory(memDraft,activeIds,life);
-      if(!problem)change(prev=>({...prev,memories:editId?prev.memories.map(x=>x.id===editId?{...memDraft,
-        title:memDraft.title.trim(),story:memDraft.story.trim()}:x):[{...memDraft,
-        title:memDraft.title.trim(),story:memDraft.story.trim()},...prev.memories]}));
+      const prepared={...memDraft,tags:[...new Set(tagsInput.split(",").map(v=>v.trim()).filter(Boolean))].slice(0,8)};
+      problem=validateMemory(prepared,activeIds,life);
+      if(!problem)change(prev=>({...prev,memories:editId?prev.memories.map(x=>x.id===editId?{...prepared,
+        title:prepared.title.trim(),story:prepared.story.trim()}:x):[{...prepared,
+        title:prepared.title.trim(),story:prepared.story.trim()},...prev.memories]}));
     }else if(editor==="Tradition"){
       problem=validateTradition(tradDraft,activeIds);
       if(!problem)change(prev=>({...prev,traditions:editId?prev.traditions.map(x=>x.id===editId?{...tradDraft,
@@ -269,7 +273,7 @@ export default function FamilyLifeWorkspace({route,data,onChange,onToast,navigat
             {mem.mediaCaption&&<small className="lf-muted">{mem.mediaCaption}</small>}
             <div className="lf-card-footer"><People ids={mem.memberIds} members={members}/><div>
               <button aria-label={"Edit "+mem.title} onClick={()=>edit("Memory",mem.id)}><Edit3 size={16}/></button>
-              <button aria-label={"Archive "+mem.title} onClick={()=>archive("Memory",mem.id)}><Archive size={16}/></button></div></div>
+              <button aria-label={mem.status==="ARCHIVED"?"Restore "+mem.title:"Archive "+mem.title} onClick={()=>archive("Memory",mem.id)}><Archive size={16}/></button></div></div>
             <div className="lf-card-actions"><button onClick={()=>setDetail({kind:"Memory",id:mem.id})}>
               <BookOpen size={15}/> Read story</button>
               <button onClick={()=>edit("Legacy",undefined,legacyFromMemory(mem))}><TreePine size={15}/> Add to legacy</button></div>
@@ -329,7 +333,7 @@ export default function FamilyLifeWorkspace({route,data,onChange,onToast,navigat
           <small> Not an access-control role</small></div>
         <div className="lf-card-footer"><People ids={record.memberIds} members={members}/><div>
           <button onClick={()=>edit("Legacy",record.id)} aria-label={"Edit "+record.title}><Edit3 size={16}/></button>
-          <button onClick={()=>archive("Legacy",record.id)} aria-label={"Archive "+record.title}><Archive size={16}/></button></div></div>
+          <button onClick={()=>archive("Legacy",record.id)} aria-label={record.status==="ARCHIVED"?"Restore "+record.title:"Archive "+record.title}><Archive size={16}/></button></div></div>
         <div className="lf-card-actions"><button onClick={()=>setDetail({kind:"Legacy",id:record.id})}><BookOpen size={15}/> Read legacy entry</button></div>
       </article>)}
       <button className="lf-new-card" onClick={()=>edit("Legacy")}><Plus size={29}/><strong>Preserve a story</strong>
@@ -400,8 +404,8 @@ export default function FamilyLifeWorkspace({route,data,onChange,onToast,navigat
             <Field label="Memory title"><input autoFocus required maxLength={130} value={memDraft.title} onChange={e=>patchMem({title:e.target.value})}/></Field>
             <Field label="Date remembered"><input type="date" required value={memDraft.date} onChange={e=>patchMem({date:e.target.value})}/></Field>
             <Field label="The story"><textarea required rows={5} maxLength={1500} value={memDraft.story} onChange={e=>patchMem({story:e.target.value})}/></Field>
-            <Field label="Tags (comma separated)"><input maxLength={160} value={memDraft.tags.join(", ")}
-              onChange={e=>patchMem({tags:e.target.value.split(",").map(v=>v.trim()).filter(Boolean).slice(0,8)})}/></Field>
+            <Field label="Tags (comma separated)"><input maxLength={160} value={tagsInput}
+              onChange={e=>setTagsInput(e.target.value)}/></Field>
             <Field label="Linked experience"><select value={memDraft.experienceId} onChange={e=>patchMem({experienceId:e.target.value})}>
               <option value="">No experience link</option>{life.experiences.map(x=><option key={x.id} value={x.id}>{x.title}</option>)}</select></Field>
             <Field label="Linked tradition"><select value={memDraft.traditionId} onChange={e=>patchMem({traditionId:e.target.value})}>
