@@ -5,7 +5,7 @@ import {
   Check, CheckCircle2, ChevronDown, ChevronRight, Circle, ClipboardCheck,
   Clock3, Command, Compass, Heart, HeartHandshake, Home, Info, Lightbulb,
   ListTodo, Menu, MessageSquareText, Moon, Plus, Search, Settings2, ShieldCheck,
-  Sparkles, Sun, Target, TreePine, TrendingUp, TriangleAlert, UserRound,
+  Sun, Target, TreePine, TriangleAlert, UserRound,
   UsersRound, X, type LucideIcon
 } from "lucide-react";
 import { seed, navItems, navigationDescriptions } from "./data";
