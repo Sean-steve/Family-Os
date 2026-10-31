@@ -20,6 +20,6 @@
     "noUnusedParameters": true
   },
   "include": [
-    "server/**/*.ts"
+    "**/*.ts"
   ]
 }
