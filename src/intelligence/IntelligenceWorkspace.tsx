@@ -1,8 +1,8 @@
 import {useMemo,useState,type FormEvent,type ReactNode} from "react";
 import {
   Activity,ArrowRight,BookOpen,CalendarClock,CalendarDays,Check,CheckCircle2,
-  ChevronRight,ClipboardList,Clock3,Compass,Eye,EyeOff,FileText,Flag,Heart,
-  HelpCircle,History,Info,Lightbulb,MessageCircle,MessagesSquare,Plus,RefreshCw,
+  ChevronRight,ClipboardList,Compass,Eye,EyeOff,FileText,Heart,
+  HelpCircle,Info,Lightbulb,MessageCircle,MessagesSquare,Plus,RefreshCw,
   Search,ShieldAlert,ShieldCheck,Sparkles,Target,Trash2,TriangleAlert,X
 } from "lucide-react";
 import type {AppData} from "../data";
@@ -12,7 +12,7 @@ import {
   INTELLIGENCE_VERSION,isDismissed,restoreSignal,saveBriefing
 } from "./model";
 import type {
-  Availability,ChiefPrompt,IntelligenceState,SavedBrief,Signal,SignalDomain,SignalNature,SignalTone
+  Availability,ChiefPrompt,IntelligenceState,Signal,SignalDomain,SignalTone
 } from "./model";
 import "./intelligence.css";
 type Section="Overview"|"Signals"|"Recommendations"|"Briefings"|"Chief of Staff";
