@@ -17,3 +17,17 @@ jobs:
       - run: npm run typecheck
       - run: npm run test
       - run: npm run build
+      - name: Install Chromium for browser certification
+        run: npx playwright install --with-deps chromium
+      - name: Cross-module browser and accessibility certification
+        run: npm run test:e2e
+      - name: Publish browser test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: family-os-phase-8-browser-evidence
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore
