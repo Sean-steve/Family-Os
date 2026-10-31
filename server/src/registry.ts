@@ -67,6 +67,26 @@ async function mutationEvent(db:PoolClient,principal:Principal,familyId:string,
 
 export async function registerRegistryRoutes(app:FastifyInstance,pool:Pool):Promise<void>{
   const transaction=(principal:Principal,fn:(db:PoolClient)=>Promise<Outcome>)=>withActor(pool,principal,fn);
+  app.patch<{Params:{familyId:string}}>("/api/v1/families/:familyId",async(request,reply)=>{
+    const params=FId.safeParse(request.params);
+    const body=z.object({name:z.string().trim().min(2).max(120)}).strict().safeParse(request.body);
+    if(!params.success||!body.success)return reply.code(400).send(invalid().body);
+    const principal=request.familyPrincipal!;
+    const result=await transaction(principal,async db=>{
+      const guard=authorize(await roleFor(db,params.data.familyId),["OWNER"]);
+      if(guard)return guard;
+      const updated=await db.query<{id:string;name:string;created_at:Date}>(
+        "UPDATE family.families SET name=$2,updated_at=now() WHERE id=$1::uuid "+
+        "RETURNING id,name,created_at",[params.data.familyId,body.data.name]);
+      if(!updated.rowCount)return missing();
+      await mutationEvent(db,principal,params.data.familyId,"FAMILY_RENAMED","FAMILY",
+        params.data.familyId,"family.renamed.v1");
+      const row=updated.rows[0];
+      return ok({id:row.id,name:row.name,role:"OWNER",createdAt:row.created_at.toISOString()});
+    });
+    return reply.code(result.status).send(result.body);
+  });
+
   app.get<{Params:{familyId:string}}>("/api/v1/families/:familyId/households",async(request,reply)=>{
     const params=FId.safeParse(request.params);if(!params.success)return reply.code(400).send(invalid().body);
     const result=await transaction(request.familyPrincipal!,async db=>{
