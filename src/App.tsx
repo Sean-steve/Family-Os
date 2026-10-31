@@ -12,7 +12,7 @@ import { seed, navItems, navigationDescriptions } from "./data";
 import type { AppData, Goal, Member } from "./data";
 import FamilyWorkspace from "./family/FamilyWorkspace";
 import OperationsWorkspace from "./operations/OperationsWorkspace";
-import { dateKey, eventsOnDate, normalizeOperations, tasksOnDate, taskDoneOn, toggleTaskForDate } from "./operations/model";
+import { clockDisplay, dateKey, dateLabel, eventDate, eventsBetween, eventsOnDate, normalizeOperations, tasksOnDate, taskDoneOn, toggleTaskForDate, shiftDate } from "./operations/model";
 import { activeMembers, migrateFamilyData, profileFor } from "./family/model";
 
 const STORE_KEY = "family-os-preview-v1";
@@ -174,6 +174,8 @@ export default function App() {
   ].filter(item => (item.title + " " + item.sub).toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 9);
   const familyMembers = activeMembers(data.members, data.family);
   const dashboardEvents = eventsOnDate(data.events, dateKey());
+  const upcomingLocalEvents = eventsBetween(data.events, shiftDate(dateKey(),1), shiftDate(dateKey(),7))
+    .filter(event => Boolean(event.date)).slice(0,3);
   const dashboardTasks = tasksOnDate(data.tasks, dateKey());
   const done = dashboardTasks.filter(t => taskDoneOn(t,dateKey())).length;
   const percent = dashboardTasks.length ? Math.round(done / dashboardTasks.length * 100) : 0;
@@ -251,7 +253,7 @@ export default function App() {
           {sampleVisible && <div className="preview-banner"><Info size={15}/><span>Interactive frontend preview · Fictional family data saved only in this browser. No backend or live health/finance integrations.</span><button onClick={() => setSampleVisible(false)} aria-label="Dismiss preview note"><X size={15}/></button></div>}
 
           <section className="metrics" aria-label="Family overview">
-            <MetricCard title="Today" value={data.events.length} foot="items" icon={CalendarDays} tone="blue" onClick={() => showDetails("Today's schedule",data.events.length + " preview calendar items scheduled. Add an event from Quick Actions or the Today panel.","Schedule")}/>
+            <MetricCard title="Today" value={dashboardEvents.length} foot="events" icon={CalendarDays} tone="blue" onClick={() => navigate("Calendar")}/>
             <MetricCard title="Family Goals" value={data.goals.length} foot="On track" icon={Target} tone="rose" onClick={() => openAdd("Goal")}/>
             <MetricCard title="Responsibilities" value={dashboardTasks.length} foot={percent + "% completed"} icon={CheckCircle2} tone="green" onClick={() => openAdd("Task")}/>
             <MetricCard title="Decisions" value="2" foot="awaiting input" icon={UsersRound} tone="purple" onClick={() => navigate("Decisions")}/>
@@ -287,6 +289,10 @@ export default function App() {
             <article className="panel upcoming-panel">
               <CardTitle action="View All" onAction={() => navigate("Calendar")}>Upcoming <span className="title-hint">Next 7 days</span></CardTitle>
               <div className="upcoming-list">
+                {upcomingLocalEvents.map(event => <button key={event.id} className="upcoming-row" onClick={() => navigate("Calendar")}>
+                  <time>{dateLabel(eventDate(event))}</time><IconBox icon={CalendarDays} tint="blue"/><span>
+                    <strong>{event.title}</strong><small>{clockDisplay(event.time)} · Added to family calendar</small>
+                  </span></button>)}
                 {data.upcoming.map(item => {
                   const Icon = item.icon === "heart" ? Heart : item.icon === "school" ? Sparkles : item.icon === "tree" ? TreePine : item.icon === "soccer" ? Target : ShieldCheck;
                   return <button key={item.id} className="upcoming-row" onClick={() => showDetails(item.title,item.detail + " · " + item.when,"Upcoming event")}>
