@@ -82,7 +82,7 @@ export function deriveSignals(data:AppData,day=dateKey()):Signal[]{
       why:"The task editor has an explicit empty assignee list for each referenced task.",
       limitation:"Unassigned does not mean someone has agreed to take responsibility. Existing legacy tasks without structured assignees are excluded.",
       rule:"Explicit due date within seven days, and assigneeIds is present and empty.",
-      sourceDate:e.map(x=>x.date).sort().at(-1)||"",asOf:day,evidence:e,
+      sourceDate:e.map(x=>x.date).sort().pop()||"",asOf:day,evidence:e,
       nextStep:"Review assignments",destination:"Responsibilities"}));
   }
   const collisions=findEventConflicts(data.events.filter(e=>publicEvent(e.category)&&!!e.date),
@@ -98,7 +98,7 @@ export function deriveSignals(data:AppData,day=dateKey()):Signal[]{
       why:"The event intervals overlap on the same date and share an attendee ID.",
       limitation:"Only explicitly dated HOME/FAMILY events are checked. No outside calendars, individual free/busy or private events were accessed.",
       rule:"Same date, overlapping start/end intervals, common attendee.",
-      sourceDate:e.map(x=>x.date).sort().at(-1)||"",asOf:day,evidence:e,
+      sourceDate:e.map(x=>x.date).sort().pop()||"",asOf:day,evidence:e,
       nextStep:"Review family calendar",destination:"Calendar"}));
   }
   const missed=data.goals.filter(g=>g.status!=="ARCHIVED"&&g.status!=="DRAFT"&&
@@ -111,7 +111,7 @@ export function deriveSignals(data:AppData,day=dateKey()):Signal[]{
       summary:"Self-reported goal progress is below 100% after the recorded target date.",
       why:"Goal entries contain an elapsed target date and an incomplete progress percentage.",
       limitation:"Progress is self-reported; it does not verify any financial, educational or health outcome.",
-      rule:"Target date < today and goal progress < 100%.",sourceDate:e.map(x=>x.date).sort().at(-1)||"",
+      rule:"Target date < today and goal progress < 100%.",sourceDate:e.map(x=>x.date).sort().pop()||"",
       asOf:day,evidence:e,nextStep:"Review family goals",destination:"Goals"}));
   }
   const comingGoals=data.goals.filter(g=>g.status==="ACTIVE"&&g.targetDate&&
@@ -125,7 +125,7 @@ export function deriveSignals(data:AppData,day=dateKey()):Signal[]{
       why:"A date-based reminder can help the family review a goal's next steps.",
       limitation:"No predicted outcome or probability of completion is available.",
       rule:"Active goal; deadline within 14 days; self-reported progress < 100%.",
-      sourceDate:e.map(x=>x.date).sort().at(-1)||"",asOf:day,evidence:e,
+      sourceDate:e.map(x=>x.date).sort().pop()||"",asOf:day,evidence:e,
       nextStep:"Review strategy and goals",destination:"Goals"}));
   }
   const unresolved=data.governance.decisions.filter(d=>d.status==="OPEN"||d.status==="APPROVAL_PENDING");
@@ -137,7 +137,7 @@ export function deriveSignals(data:AppData,day=dateKey()):Signal[]{
       why:"The decisions remain in open voting or named-reviewer states.",
       limitation:"Votes, membership and approvals are unverified browser simulations, not actual authority.",
       rule:"Decision status is OPEN or APPROVAL_PENDING.",
-      sourceDate:e.map(x=>x.date).sort().at(-1)||"",asOf:day,evidence:e,
+      sourceDate:e.map(x=>x.date).sort().pop()||"",asOf:day,evidence:e,
       nextStep:"Open decision center",destination:"Decisions"}));
   }
   const exp=data.life.experiences.filter(e=>!e.archived&&e.status==="PLANNED"&&!e.linkedEventId&&
@@ -151,7 +151,7 @@ export function deriveSignals(data:AppData,day=dateKey()):Signal[]{
       why:"Their dates are recorded, but linkedEventId is empty.",
       limitation:"Calendar entry creation is optional and must be explicitly approved in Experiences.",
       rule:"PLANNED experience within 14 days, no linked event.",
-      sourceDate:e.map(x=>x.date).sort().at(-1)||"",asOf:day,evidence:e,
+      sourceDate:e.map(x=>x.date).sort().pop()||"",asOf:day,evidence:e,
       nextStep:"Review experiences",destination:"Experiences"}));
   }
   const traditions=data.life.traditions.map(t=>({tradition:t,next:nextTraditionDate(t,day)}))
@@ -164,7 +164,7 @@ export function deriveSignals(data:AppData,day=dateKey()):Signal[]{
       why:"The next dates are calculated from each active tradition's cadence.",
       limitation:"These are calendar calculations, not confirmed attendance, reminders or completed events.",
       rule:"Next recurring tradition date falls within the next seven days.",
-      sourceDate:e.map(x=>x.date).sort().at(-1)||"",asOf:day,evidence:e,
+      sourceDate:e.map(x=>x.date).sort().pop()||"",asOf:day,evidence:e,
       nextStep:"Open family traditions",destination:"Traditions"}));
   }
   return signals.sort((a,b)=>order[a.tone]-order[b.tone]||a.id.localeCompare(b.id));
