@@ -14,6 +14,8 @@ import FamilyWorkspace from "./family/FamilyWorkspace";
 import OperationsWorkspace from "./operations/OperationsWorkspace";
 import StrategyWorkspace from "./strategy/StrategyWorkspace";
 import GovernanceWorkspace from "./governance/GovernanceWorkspace";
+import FamilyLifeWorkspace from "./life/FamilyLifeWorkspace";
+import { normalizeLife } from "./life/model";
 import { normalizeGovernance, decisionNeedsInput } from "./governance/model";
 import { migrateStrategy, normalizedGoals, recordGoalProgress } from "./strategy/model";
 import { clockDisplay, dateKey, dateLabel, eventDate, eventsBetween, eventsOnDate, normalizeOperations, tasksOnDate, taskDoneOn, toggleTaskForDate, shiftDate } from "./operations/model";
@@ -23,7 +25,7 @@ const STORE_KEY = "family-os-preview-v1";
 const icons: Record<string, LucideIcon> = {
   dashboard: Home, family: UsersRound, plan: ClipboardCheck, goals: Target,
   decisions: HeartHandshake, calendar: CalendarDays, tasks: ListTodo,
-  routines: Clock3, memory: BookHeart, legacy: TreePine, insights: Activity,
+  routines: Clock3, experiences: Compass, memory: BookHeart, traditions: Heart, legacy: TreePine, insights: Activity,
   search: Search
 };
 const todayText = new Intl.DateTimeFormat("en-GB", {
@@ -40,7 +42,7 @@ function readPreview(): AppData {
         Array.isArray(parsed.members) && Array.isArray(parsed.tasks) &&
         "goals" in parsed && Array.isArray(parsed.goals) &&
         "events" in parsed && Array.isArray(parsed.events) &&
-        "upcoming" in parsed && Array.isArray(parsed.upcoming)) return { ...(parsed as AppData), family: migrateFamilyData((parsed as Partial<AppData>).family), operations: normalizeOperations((parsed as Partial<AppData>).operations), strategy: migrateStrategy((parsed as Partial<AppData>).strategy), governance: normalizeGovernance((parsed as Partial<AppData>).governance), goals: normalizedGoals((parsed as AppData).goals) };
+        "upcoming" in parsed && Array.isArray(parsed.upcoming)) return { ...(parsed as AppData), family: migrateFamilyData((parsed as Partial<AppData>).family), operations: normalizeOperations((parsed as Partial<AppData>).operations), strategy: migrateStrategy((parsed as Partial<AppData>).strategy), governance: normalizeGovernance((parsed as Partial<AppData>).governance), life: normalizeLife((parsed as Partial<AppData>).life), goals: normalizedGoals((parsed as AppData).goals) };
   } catch { /* local storage can be disabled; use preview state */ }
   return seed;
 }
@@ -178,7 +180,11 @@ export default function App() {
     ...data.goals.map(g => ({ title: g.title, sub: "Family goal · " + g.progress + "% complete", page: "Goals" })),
     ...data.tasks.map(t => ({ title: t.title, sub: "Responsibility · " + t.person, page: "Responsibilities" })),
     ...data.events.filter(e => e.status !== "CANCELLED").map(e => ({ title: e.title, sub: "Family calendar · " + (e.date || "Today"), page: "Calendar" })),
-    ...data.operations.routines.map(r => ({ title: r.name, sub: "Family routine", page: "Routines" }))
+    ...data.operations.routines.map(r => ({ title: r.name, sub: "Family routine", page: "Routines" })),
+    ...data.life.experiences.map(x => ({ title: x.title, sub: "Family experience", page: "Experiences" })),
+    ...data.life.memories.map(x => ({ title: x.title, sub: "Memory timeline", page: "Memory" })),
+    ...data.life.traditions.map(x => ({ title: x.title, sub: "Family tradition", page: "Traditions" })),
+    ...data.life.legacy.map(x => ({ title: x.title, sub: "Family legacy", page: "Legacy" }))
   ].filter(item => (item.title + " " + item.sub).toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 9);
   const familyMembers = activeMembers(data.members, data.family);
   const dashboardEvents = eventsOnDate(data.events, dateKey());
@@ -358,6 +364,8 @@ export default function App() {
       route === "Goals" ? <StrategyWorkspace data={data} onChange={setData} onToast={setToast} navigate={navigate}
         initialAction={strategyAction} onInitialActionConsumed={() => setStrategyAction(null)} /> :
       route === "Decisions" ? <GovernanceWorkspace data={data} onChange={setData} onToast={setToast} navigate={navigate} /> :
+      (route === "Experiences" || route === "Memory" || route === "Traditions" || route === "Legacy") ?
+      <FamilyLifeWorkspace route={route} data={data} onChange={setData} onToast={setToast} navigate={navigate} /> :
       <main className="phase-page">
         <button className="back-link" onClick={() => navigate("Dashboard")}><ArrowLeft size={17}/> Back to dashboard</button>
         <div className="phase-hero"><span className="phase-tag">Planned for Phase {phase}</span><span className="phase-icon"><Compass size={31}/></span><h1>{route}</h1><p>{navigationDescriptions[route] || "A dedicated Family OS workspace is planned for an upcoming development phase."}</p><div className="phase-actions"><button className="primary-button" onClick={() => navigate("Dashboard")}>Return to Family Command Center <ArrowRight size={17}/></button><button className="secondary-button" onClick={() => setSearchOpen(true)}><Search size={17}/> Search preview</button></div></div>
