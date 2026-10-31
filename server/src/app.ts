@@ -29,8 +29,16 @@ export async function createApi(options:ApiOptions):Promise<FastifyInstance>{
     reply.header("Referrer-Policy","no-referrer");
     return payload;
   });
-  app.setErrorHandler((_error,request,reply)=>{
-    // No PostgreSQL errors, SQL, token hints, identity claims or stack traces.
+  app.setErrorHandler((error,request,reply)=>{
+    // Preserve client/rate-limit status without exposing token, SQL or user info.
+    const rawStatus=error&&typeof error==="object"&&"statusCode" in error?
+      Number((error as {statusCode:unknown}).statusCode):500;
+    if(rawStatus===429){
+      return reply.code(429).send(jsonError("RATE_LIMITED","Request limit exceeded."));
+    }
+    if([400,413,415].includes(rawStatus)){
+      return reply.code(rawStatus).send(jsonError("VALIDATION_ERROR","Invalid request."));
+    }
     request.log.error({code:"UNEXPECTED_API_ERROR"},"API request failed");
     reply.code(500).send(jsonError("INTERNAL_ERROR","Unable to complete request."));
   });
