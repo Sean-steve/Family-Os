@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { seed, navItems, navigationDescriptions } from "./data";
 import type { AppData, Goal, Member } from "./data";
+import FamilyWorkspace from "./family/FamilyWorkspace";
+import { activeMembers, migrateFamilyData, profileFor } from "./family/model";
 
 const STORE_KEY = "family-os-preview-v1";
 const icons: Record<string, LucideIcon> = {
@@ -32,7 +34,7 @@ function readPreview(): AppData {
         Array.isArray(parsed.members) && Array.isArray(parsed.tasks) &&
         "goals" in parsed && Array.isArray(parsed.goals) &&
         "events" in parsed && Array.isArray(parsed.events) &&
-        "upcoming" in parsed && Array.isArray(parsed.upcoming)) return parsed as AppData;
+        "upcoming" in parsed && Array.isArray(parsed.upcoming)) return { ...(parsed as AppData), family: migrateFamilyData((parsed as Partial<AppData>).family) };
   } catch { /* local storage can be disabled; use preview state */ }
   return seed;
 }
@@ -142,7 +144,7 @@ export default function App() {
       setData(prev => ({ ...prev, events: [...prev.events, { id: id(), time: draftExtra.trim() || "6:00 PM", title, note: "Family", attendees: ["alex"], color: "#a9d5fc" }] }));
     } else {
       const next = { id: id(), name: title, role: draftExtra.trim() || "Family member", avatar: 0, color: "#dbeafe" };
-      setData(prev => ({ ...prev, members: [...prev.members, next] }));
+      setData(prev => ({ ...prev, members: [...prev.members, next], family: { ...prev.family, profiles: {...prev.family.profiles, [next.id]: profileFor(next.id, next.role)} } }));
     }
     setToast(addKind + " added to this browser's preview");
     setAddKind(null);
@@ -160,6 +162,7 @@ export default function App() {
     ...data.tasks.map(t => ({ title: t.title, sub: "Responsibility · " + t.person, page: "Responsibilities" })),
     ...data.events.map(e => ({ title: e.title, sub: "Today · " + e.time, page: "Calendar" }))
   ].filter(item => (item.title + " " + item.sub).toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 9);
+  const familyMembers = activeMembers(data.members, data.family);
   const done = data.tasks.filter(t => t.done).length;
   const percent = data.tasks.length ? Math.round(done / data.tasks.length * 100) : 0;
   const phase = navItems.find(item => item.label === route)?.phase || (route === "Personal Mode" ? 8 : 8);
@@ -202,9 +205,9 @@ export default function App() {
         <div className="topbar-right">
           <div className="family-switch-wrap">
             <button className="family-switch" onClick={() => setFamilyOpen(!familyOpen)} aria-expanded={familyOpen}>
-              <MemberStack ids={["alex","jamie"]} members={data.members} /><strong>The Taylor Family</strong><ChevronDown size={16} />
+              <MemberStack ids={["alex","jamie"]} members={data.members} /><strong>{data.family.name}</strong><ChevronDown size={16} />
             </button>
-            {familyOpen && <div className="popover family-popover"><b>Family workspace</b><p>The Taylor Family · Local preview</p><button onClick={() => {setFamilyOpen(false);showDetails("Family switching","Multi-family switching will arrive with Family Profiles in Phase 2. This preview contains one local family workspace.","Phase 2");}}>Manage family workspaces <ArrowRight size={14}/></button></div>}
+            {familyOpen && <div className="popover family-popover"><b>Family workspace</b><p>{data.family.name} · Local preview</p><button onClick={() => {setFamilyOpen(false);showDetails("Family switching","Multi-family switching will arrive with Family Profiles in Phase 2. This preview contains one local family workspace.","Phase 2");}}>Manage family workspaces <ArrowRight size={14}/></button></div>}
           </div>
           <button className="top-icon" aria-label="Notifications" onClick={() => setNotificationsOpen(s => !s)}><Bell size={20} />{!data.notificationsSeen && <span className="top-count">3</span>}</button>
           <button className="top-icon" aria-label={dark ? "Switch to light theme" : "Switch to dark theme"} onClick={() => setDark(s => !s)}>{dark ? <Moon size={20} /> : <Sun size={21} />}</button>
@@ -228,7 +231,7 @@ export default function App() {
               <div className="hero-weather"><Sun size={30} /><span>Family preview<br /><strong>Our shared space</strong></span></div>
             </div>
             <div className="hero-bottom">
-              <div className="hero-members">{data.members.slice(0, 6).map(m => <span className="hero-member" key={m.id}><Avatar member={m} /><span><b>{m.name}</b><small>{m.role}</small></span></span>)}
+              <div className="hero-members">{familyMembers.slice(0, 6).map(m => <span className="hero-member" key={m.id}><Avatar member={m} /><span><b>{m.name}</b><small>{m.role}</small></span></span>)}
                 <button className="add-member" onClick={() => openAdd("Member")}><span><Plus size={21}/></span><small>Add Member</small></button></div>
               <div className="hero-quote"><i>“A family is not an important thing.<br/>It’s everything.”</i><small>— Michael J. Fox</small></div>
             </div>
@@ -322,7 +325,7 @@ export default function App() {
           </section>
           <footer className="dashboard-footer"><span>Family OS · Phase 1 frontend preview</span><span>No account or backend connection · Private to this browser</span></footer>
         </main>
-      </> : <main className="phase-page">
+      </> : route === "Family" ? <FamilyWorkspace data={data} onChange={setData} onToast={setToast} navigate={navigate} /> : <main className="phase-page">
         <button className="back-link" onClick={() => navigate("Dashboard")}><ArrowLeft size={17}/> Back to dashboard</button>
         <div className="phase-hero"><span className="phase-tag">Planned for Phase {phase}</span><span className="phase-icon"><Compass size={31}/></span><h1>{route}</h1><p>{navigationDescriptions[route] || "A dedicated Family OS workspace is planned for an upcoming development phase."}</p><div className="phase-actions"><button className="primary-button" onClick={() => navigate("Dashboard")}>Return to Family Command Center <ArrowRight size={17}/></button><button className="secondary-button" onClick={() => setSearchOpen(true)}><Search size={17}/> Search preview</button></div></div>
         <div className="phase-note"><ShieldCheck size={23}/><div><strong>Intentional Phase 1 boundary</strong><p>This screen is not represented as finished. The application shell and dashboard are implemented now; this module will become interactive in its designated phase, using the same visual system.</p></div></div>
