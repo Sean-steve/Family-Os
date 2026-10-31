@@ -43,6 +43,7 @@ export default function StrategyWorkspace({data,onChange,onToast,navigate,initia
     return [k?mission(k.missionId)?.title:"",k?.title,o?.title].filter(Boolean).join(" / ");
   };
   const activeValues=strategy.values.filter(x=>!x.archived).sort((a,b)=>a.priority-b.priority);
+  const visibleValues=strategy.values.filter(x=>archived||!x.archived).sort((a,b)=>a.priority-b.priority);
   const visibleMissions=strategy.missions.filter(x=>archived||x.status!=="ARCHIVED");
   const visibleMilestones=strategy.milestones.filter(x=>archived||x.status!=="ARCHIVED");
   const visibleObjectives=strategy.objectives.filter(x=>archived||x.status!=="ARCHIVED");
@@ -188,17 +189,21 @@ export default function StrategyWorkspace({data,onChange,onToast,navigate,initia
         <h3>{strategy.vision.title}</h3><blockquote>“{strategy.vision.statement}”</blockquote>
         <div><span><CalendarDays size={16}/>{strategy.vision.horizon}</span><Status value={strategy.vision.status}/></div></section>
       <Heading tag="FAMILY VALUES" title="The principles we live by" description="A useful guide for daily choices and future decisions."/>
-      <div className="st-card-grid">{activeValues.map((v,i)=><article className="st-value-card" key={v.id}>
+      <div className="st-archive-toggle"><label><input type="checkbox" checked={archived} onChange={e=>setArchived(e.target.checked)}/> Show archived records</label></div>
+      <div className="st-card-grid">{visibleValues.map((v,i)=><article className="st-value-card" key={v.id}>
         <span className={"st-value-icon tone-"+i%5}><ValueIcon symbol={v.symbol}/></span><small>VALUE {v.priority.toString().padStart(2,"0")}</small>
         <h3>{v.title}</h3><p>{v.description}</p><footer><span>{strategy.missions.filter(m=>m.valueIds.includes(v.id)).length} linked missions</span>
           <button aria-label={"Edit "+v.title} onClick={()=>open("Value",v.id)}><Edit3 size={16}/></button>
-          <button aria-label={"Archive "+v.title} onClick={()=>archive("Value",v.id)}><X size={16}/></button></footer></article>)}
+          <button aria-label={v.archived?"Restore "+v.title:"Archive "+v.title} onClick={()=>v.archived?
+          (change(p=>({...p,strategy:{...p.strategy,values:p.strategy.values.map(row=>row.id===v.id?{...row,archived:false}:row)}})),onToast("Value restored")):
+          archive("Value",v.id)}>{v.archived?<Check size={16}/>:<X size={16}/>}</button></footer></article>)}
         <button className="st-new-card" onClick={()=>open("Value")}><Plus size={27}/><b>Add a family value</b><small>What's important to your family?</small></button></div>
       <section className="st-panel st-history"><h3>Vision History</h3>{strategy.vision.history.length?strategy.vision.history.slice().reverse().map((h,i)=>
         <p key={i}><b>{h.changedAt}</b> — {h.statement}</p>):<p>No previous versions yet. Updates will be recorded here.</p>}</section>
     </>}
     {tab==="Missions"&&<>
       <Heading tag="LONG-TERM PURPOSE" title="Our Family Missions" description="Turn shared values into lasting commitments." action={action("Mission","Create Mission")}/>
+      <div className="st-archive-toggle"><label><input type="checkbox" checked={archived} onChange={e=>setArchived(e.target.checked)}/> Show archived missions</label></div>
       <div className="st-card-grid">{visibleMissions.map(m=><article className="st-mission-card" key={m.id}>
         <div className="st-card-top"><span className="st-round"><Rocket size={23}/></span><Status value={m.status}/></div>
         <h3>{m.title}</h3><p>{m.description}</p>
@@ -216,6 +221,7 @@ export default function StrategyWorkspace({data,onChange,onToast,navigate,initia
     </>}
     {tab==="Milestones"&&<>
       <Heading tag="CHECKPOINTS & ACHIEVEMENTS" title="Family Milestones" description="Break each mission into clear, dated achievements." action={action("Milestone","New Milestone")}/>
+      <div className="st-archive-toggle"><label><input type="checkbox" checked={archived} onChange={e=>setArchived(e.target.checked)}/> Show archived milestones</label></div>
       <div className="st-list">{visibleMilestones.map(k=><article className="st-row" key={k.id}><span className="st-row-icon"><Award size={22}/></span>
         <div><span className="st-context">{mission(k.missionId)?.title||"Mission not found"}</span><h3>{k.title}</h3><p>{k.description}</p>
           <div className="st-row-badges"><Status value={k.status}/><span><CalendarDays size={15}/>{k.targetDate||"Not scheduled"}</span>
@@ -229,6 +235,7 @@ export default function StrategyWorkspace({data,onChange,onToast,navigate,initia
     {tab==="Objectives"&&<>
       <Heading tag="MEASURABLE OUTCOMES" title="Family Objectives" description="Make each milestone concrete with owned objectives and linked goals."
         action={action("Objective","New Objective")}/>
+      <div className="st-archive-toggle"><label><input type="checkbox" checked={archived} onChange={e=>setArchived(e.target.checked)}/> Show archived objectives</label></div>
       <div className="st-card-grid">{visibleObjectives.map(o=><article className="st-objective-card" key={o.id}>
         <span className="st-context">{milestone(o.milestoneId)?.title||"Unlinked milestone"}</span>
         <div className="st-card-top"><span className="st-round"><Compass size={22}/></span><Status value={o.status}/></div>
