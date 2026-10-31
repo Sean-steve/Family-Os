@@ -9,12 +9,23 @@
     "preview": "vite preview --host 0.0.0.0",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "dev:api": "tsx watch server/src/index.ts",
+    "start:api": "tsx server/src/index.ts",
+    "typecheck:api": "tsc -p server/tsconfig.json --noEmit",
+    "db:migrate": "tsx server/src/migrate.ts",
+    "test:api": "vitest run server/tests"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "fastify": "^5.5.0",
+    "@fastify/cors": "^11.1.0",
+    "@fastify/rate-limit": "^11.1.0",
+    "pg": "^8.16.0",
+    "jose": "^6.1.0",
+    "zod": "^4.1.0"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
@@ -27,6 +38,9 @@
     "autoprefixer": "^10.4.20",
     "vitest": "^3.2.4",
     "@playwright/test": "^1.51.0",
-    "@axe-core/playwright": "^4.10.2"
+    "@axe-core/playwright": "^4.10.2",
+    "@types/node": "^22.15.0",
+    "@types/pg": "^8.15.0",
+    "tsx": "^4.20.0"
   }
 }
