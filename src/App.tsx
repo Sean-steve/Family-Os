@@ -214,7 +214,7 @@ export default function App() {
       <div className="sidebar-spacer" />
       <div className="side-separator" />
       <div className="lower-nav">
-        <button className="nav-item" onClick={() => setNotificationsOpen(true)}><Bell size={19} /><span>Notifications</span>{!data.notificationsSeen && <b className="red-dot">3</b>}</button>
+        <button className="nav-item" onClick={() => setNotificationsOpen(true)}><Bell size={19} /><span>Notifications</span></button>
         <button className="nav-item" onClick={() => navigate("Messages")}><MessageSquareText size={19} /><span>Messages</span></button>
         <button className="nav-item" onClick={() => navigate("Settings")}><Settings2 size={19} /><span>Settings</span></button>
       </div>
@@ -236,18 +236,20 @@ export default function App() {
             </button>
             {familyOpen && <div className="popover family-popover"><b>Family workspace</b><p>{data.family.name} · Local preview</p><button onClick={() => {setFamilyOpen(false);showDetails("Family switching","This prototype contains one browser-local family. Multi-family switching requires authenticated isolation, consent and a backend and is not implemented.","Not available");}}>Manage family workspaces <ArrowRight size={14}/></button></div>}
           </div>
-          <button className="top-icon" aria-label="Notifications" onClick={() => setNotificationsOpen(s => !s)}><Bell size={20} />{!data.notificationsSeen && <span className="top-count">3</span>}</button>
+          <button className="top-icon" aria-label="Notifications" onClick={() => setNotificationsOpen(s => !s)}><Bell size={20} /></button>
           <button className="top-icon" aria-label={dark ? "Switch to light theme" : "Switch to dark theme"} onClick={() => setDark(s => !s)}>{dark ? <Moon size={20} /> : <Sun size={21} />}</button>
         </div>
       </header>
-      {notificationsOpen && <div className="notifications-popover popover">
-        <div className="popover-heading"><strong>Notifications</strong><button onClick={() => setNotificationsOpen(false)} aria-label="Close notifications"><X size={16} /></button></div>
-        <p className="popover-muted">Illustrative family updates</p>
-        <div className="notification-item"><span className="notice-emoji red">!</span><span><b>Decision needs your input</b><small>Summer holiday destination</small></span></div>
-        <div className="notification-item"><span className="notice-emoji amber">!</span><span><b>School permission form</b><small>Due today</small></span></div>
-        <div className="notification-item"><span className="notice-emoji green">✓</span><span><b>Goal progress</b><small>Europe trip is 75% complete</small></span></div>
-        <button className="popover-button" onClick={() => {setData(prev => ({...prev,notificationsSeen:true}));setNotificationsOpen(false);setToast("Notifications marked as read");}}>Mark all as read <Check size={15} /></button>
-      </div>}
+      {notificationsOpen && <div className="notifications-popover popover" role="region" aria-label="Family observations">
+        <div className="popover-heading"><strong>Recorded family observations</strong>
+          <button onClick={() => setNotificationsOpen(false)} aria-label="Close observations"><X size={16}/></button></div>
+        <p className="popover-muted">Current rule-based signals · Not push notifications or verified alerts</p>
+        {intelligenceSignals.slice(0,4).map(signal=><button key={signal.id} className="notification-item"
+          onClick={()=>navigate("Insights")}><span className="notice-emoji amber">!</span>
+          <span><b>{signal.title}</b><small>{signal.domain} · Review linked source evidence</small></span></button>)}
+        {!intelligenceSignals.length&&<p className="popover-muted">No supported observations right now. This does not mean the family has no needs.</p>}
+        <button className="popover-button" onClick={()=>navigate("Insights")}>Open Insights <ArrowRight size={15}/></button>
+      </div>
 
       {route === "Dashboard" ? <>
         <main className="dashboard">
@@ -268,7 +270,7 @@ export default function App() {
           <section className="metrics" aria-label="Family overview">
             <MetricCard title="Today" value={dashboardEvents.length} foot="events" icon={CalendarDays} tone="blue" onClick={() => navigate("Calendar")}/>
             <MetricCard title="Family Goals" value={data.goals.filter(g => g.status !== "ARCHIVED").length} foot="Tracked locally" icon={Target} tone="rose" onClick={() => openAdd("Goal")}/>
-            <MetricCard title="Responsibilities" value={dashboardTasks.length} foot={percent + "% completed"} icon={CheckCircle2} tone="green" onClick={() => openAdd("Task")}/>
+            <MetricCard title="Responsibilities" value={dashboardTasks.length} foot={dashboardTasks.length?percent+"% completed":"No dated shared tasks"} icon={CheckCircle2} tone="green" onClick={() => openAdd("Task")}/>
             <MetricCard title="Decisions" value={data.governance.decisions.filter(decisionNeedsInput).length} foot="need local input" icon={UsersRound} tone="purple" onClick={() => navigate("Decisions")}/>
             <MetricCard title="Data Connections" value="0" foot="external OS connected" icon={Heart} tone="blue" onClick={() => navigate("Insights")}/>
             <MetricCard title="Evidence Alerts" value={evidenceAttention.length} foot="dated items to review" icon={TriangleAlert} tone="orange" onClick={() => navigate("Insights")}/>
@@ -314,12 +316,9 @@ export default function App() {
                   <time>{dateLabel(eventDate(event))}</time><IconBox icon={CalendarDays} tint="blue"/><span>
                     <strong>{event.title}</strong><small>{clockDisplay(event.time)} · Added to family calendar</small>
                   </span></button>)}
-                {data.upcoming.map(item => {
-                  const Icon = item.icon === "heart" ? Heart : item.icon === "school" ? Sparkles : item.icon === "tree" ? TreePine : item.icon === "soccer" ? Target : ShieldCheck;
-                  return <button key={item.id} className="upcoming-row" onClick={() => showDetails(item.title,item.detail + " · " + item.when,"Upcoming event")}>
-                    <time>{item.when}</time><IconBox icon={Icon} tint={item.tint} /><span><strong>{item.title}</strong><small>{item.detail}</small></span>
-                  </button>;
-                })}
+                {!upcomingLocalEvents.length&&<div className="dashboard-empty">
+                  No upcoming explicitly dated shared events. Open Calendar to plan one.
+                </div>}
               </div>
             </article>
           </section>
@@ -343,26 +342,30 @@ export default function App() {
             </article>
 
             <article className="panel health-panel">
-              <CardTitle action="View Details" onAction={() => showDetails("Family Health overview","All health and finance indicators shown on this screen are illustrative. No specialised system is connected in Phase 1.","Preview indicator")}>Family Health</CardTitle>
-              {[
-                { title: "Financial", note: "On track", color: "good" },
-                { title: "Health & Wellbeing", note: "Good", color: "good" },
-                { title: "Household", note: "Some items pending", color: "warn" },
-                { title: "Goal Progress", note: "Strong momentum", color: "good" },
-                { title: "Family Coordination", note: "Good", color: "good" }
-              ].map(item => <div className="health-row" key={item.title}><span className={"health-tick " + item.color}>{item.color === "good" ? <Check size={16}/> : <Plus size={15}/>}</span><span><strong>{item.title}</strong><small>{item.note}</small></span></div>)}
-              <p className="sample-disclaimer">Illustrative status · not a health assessment</p>
+              <CardTitle action="View Coverage" onAction={()=>navigate("Insights")}>Evidence & Connections</CardTitle>
+              {coverage.map(item=><div className="health-row" key={item.area}>
+                <span className="health-tick neutral"><Info size={16}/></span>
+                <span><strong>{item.area}</strong>
+                  <small>{item.status==="NOT_CONNECTED"?"Not connected":
+                    item.status==="INSUFFICIENT_DATA"?"Insufficient dated data":"Browser records only · Unverified"}</small></span>
+              </div>)}
+              <p className="sample-disclaimer">No connected Health OS, Finance OS or HumanKernelOS. No wellbeing or financial assessment.</p>
             </article>
 
             <article className="panel insights-panel">
-              <CardTitle action="View All" onAction={() => navigate("Insights")}>Family Insights</CardTitle>
-              <button className="insight-box positive-insight" onClick={() => showDetails("Routine consistency","This example illustrates future Family OS intelligence. It is not calculated from real historical records.","Illustrative insight")}><IconBox icon={TrendingUp} tint="green"/><span>Your family is <b>23% more consistent</b> with routines this month.</span><em>↑ 23%</em></button>
-              <button className="insight-box" onClick={() => showDetails("Best time for a family holiday","The future scenario engine will compare calendar availability, budget and other authorised family context. This card is a preview.","Illustrative insight")}><IconBox icon={Lightbulb} tint="purple"/><span><b>Best time for a family holiday</b><small>July shows the best combination of school holidays, weather and budget.</small></span><ChevronRight size={18}/></button>
-              <button className="insight-box" onClick={() => showDetails("Workload forecast","This is a design example. The later capacity engine will show evidence and confidence instead of fabricated forecasts.","Illustrative insight")}><IconBox icon={TriangleAlert} tint="rose"/><span><b>Increased workload next week</b><small>3 responsibilities overlapping with school events. Consider delegating.</small></span><ChevronRight size={18}/></button>
-              <div className="insight-footnote"><Sparkles size={13}/> AI intelligence is simulated in Phase 1</div>
+              <CardTitle action="Explore Evidence" onAction={()=>navigate("Insights")}>Family Insights</CardTitle>
+              {intelligenceSignals.slice(0,3).map(signal=><button className="insight-box" key={signal.id}
+                onClick={()=>navigate("Insights")}>
+                <IconBox icon={signal.tone==="ATTENTION"?TriangleAlert:signal.tone==="CELEBRATE"?Heart:Lightbulb}
+                  tint={signal.tone==="ATTENTION"?"rose":signal.tone==="CELEBRATE"?"green":"purple"}/>
+                <span><b>{signal.title}</b><small>{signal.domain} · {signal.evidence.length} supporting source record(s)</small></span>
+                <ChevronRight size={18}/></button>)}
+              {!intelligenceSignals.length&&<p className="dashboard-empty">No rule-matched dated signals.
+                Missing data is not evidence of family health or safety.</p>}
+              <div className="insight-footnote"><BookHeart size={13}/> Deterministic local insights · No AI predictions or private cross-OS data</div>
             </article>
           </section>
-          <footer className="dashboard-footer"><span>Family OS · Phase 1 frontend preview</span><span>No account or backend connection · Private to this browser</span></footer>
+          <footer className="dashboard-footer"><span>Family OS · Frontend prototype · Phases 1–8</span><span>LocalStorage is unencrypted; no accounts or secure private storage</span></footer>
         </main>
       </> : route === "Family" ? <FamilyWorkspace data={data} onChange={setData} onToast={setToast} navigate={navigate} /> :
       (route === "Plan" || route === "Calendar" || route === "Responsibilities" || route === "Routines") ?
