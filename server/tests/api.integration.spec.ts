@@ -140,6 +140,18 @@ describe("B0 authenticated and tenant-isolated family bootstrap",()=>{
     expect(controls.rows).toHaveLength(4);
     expect(controls.rows.every(r=>r.relrowsecurity&&r.relforcerowsecurity)).toBe(true);
   });
+  it("revocation blocks the original creator at the RLS layer as well as the API",async()=>{
+    const changed=await admin.query(
+      "UPDATE family.memberships SET state='REVOKED' WHERE family_id=$1 RETURNING state",[familyId]);
+    expect(changed.rows).toEqual([{state:"REVOKED"}]);
+    const former={issuer,subject:identityA,actorId:actorIdFor(issuer,identityA)};
+    const rows=await withActor(pool,former,async db=>
+      (await db.query("SELECT id FROM family.families WHERE id=$1",[familyId])).rows);
+    expect(rows).toEqual([]);
+    const response=await app.inject({method:"GET",url:"/api/v1/families/"+familyId,
+      headers:await auth(identityA)});
+    expect(response.statusCode).toBe(404);
+  });
   it("rejects invalid or extra client fields and never trusts a caller-supplied role",async()=>{
     const attempt=await app.inject({method:"POST",url:"/api/v1/families",headers:await auth(identityB),
       payload:{name:"Illegal override",role:"OWNER",created_by:actorIdFor(issuer,identityA)}});
